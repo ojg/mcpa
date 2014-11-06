@@ -13,6 +13,12 @@
 #define LED_PIN_bm PIN5_bm
 #define LED_PORT PORTD
 
+#define USART_TX_PIN PIN3_bm
+#define USART_RX_PIN PIN2_bm
+#define USART_PORT PORTD
+#define USART_RXC_vect USARTD0_RXC_vect
+#define USART_DRE_vect USARTD0_DRE_vect
+
 
 
 
