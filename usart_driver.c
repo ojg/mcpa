@@ -69,7 +69,13 @@
 #include "board.h"
 #include <stdio.h>
 
+static int uart_getchar(FILE *stream);
+static int uart_putchar(char c, FILE *stream);
 
+USART_data_t USART_data;
+FILE usart_stream = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
+
+extern Task_flag_t taskflags;
 
 /*! \brief Initializes buffer and selects what USART module to use.
  *
@@ -80,7 +86,7 @@
  *  \param usart                The USART module.
  *  \param dreIntLevel          Data register empty interrupt level.
  */
-void USART_InterruptDriver_Initialize(USART_data_t * usart_data,
+static void USART_InterruptDriver_Initialize(USART_data_t * usart_data,
                                       USART_t * usart,
                                       USART_DREINTLVL_t dreIntLevel)
 {
@@ -105,12 +111,13 @@ void USART_InterruptDriver_Initialize(USART_data_t * usart_data,
  *  \param usart_data         The USART_data_t struct instance
  *  \param dreIntLevel        Interrupt level of the DRE interrupt.
  */
-void USART_InterruptDriver_DreInterruptLevel_Set(USART_data_t * usart_data,
+/*
+static void USART_InterruptDriver_DreInterruptLevel_Set(USART_data_t * usart_data,
                                                  USART_DREINTLVL_t dreIntLevel)
 {
 	usart_data->dreIntLevel = dreIntLevel;
 }
-
+*/
 
 /*! \brief Test if there is data in the transmitter software buffer.
  *
@@ -122,7 +129,7 @@ void USART_InterruptDriver_DreInterruptLevel_Set(USART_data_t * usart_data,
  *  \retval true      There is data in the receive buffer.
  *  \retval false     The receive buffer is empty.
  */
-bool USART_TXBuffer_FreeSpace(USART_data_t * usart_data)
+static bool USART_TXBuffer_FreeSpace(USART_data_t * usart_data)
 {
 	/* Make copies to make sure that volatile access is specified. */
 	uint8_t tempHead = (usart_data->buffer.TX_Head + 1) & USART_TX_BUFFER_MASK;
@@ -142,7 +149,7 @@ bool USART_TXBuffer_FreeSpace(USART_data_t * usart_data)
  *  \param usart_data The USART_data_t struct instance.
  *  \param data       The data to send.
  */
-bool USART_TXBuffer_PutByte(USART_data_t * usart_data, uint8_t data)
+static bool USART_TXBuffer_PutByte(USART_data_t * usart_data, uint8_t data)
 {
 	uint8_t tempCTRLA;
 	uint8_t tempTX_Head;
@@ -180,7 +187,7 @@ bool USART_TXBuffer_PutByte(USART_data_t * usart_data, uint8_t data)
  *  \retval true      There is data in the receive buffer.
  *  \retval false     The receive buffer is empty.
  */
-bool USART_RXBufferData_Available(USART_data_t * usart_data)
+static inline bool USART_RXBufferData_Available(USART_data_t * usart_data)
 {
 	/* Make copies to make sure that volatile access is specified. */
 	uint8_t tempHead = usart_data->buffer.RX_Head;
@@ -203,7 +210,7 @@ bool USART_RXBufferData_Available(USART_data_t * usart_data)
  *
  *  \return         Received data.
  */
-uint8_t USART_RXBuffer_GetByte(USART_data_t * usart_data)
+static inline uint8_t USART_RXBuffer_GetByte(USART_data_t * usart_data)
 {
 	USART_Buffer_t * bufPtr;
 	uint8_t ans;
@@ -226,30 +233,39 @@ uint8_t USART_RXBuffer_GetByte(USART_data_t * usart_data)
  *
  *  \param usart_data      The USART_data_t struct instance.
  */
-bool USART_RXComplete(USART_data_t * usart_data)
+static inline bool USART_RXComplete(USART_data_t * usart_data)
 {
-	USART_Buffer_t * bufPtr;
-	bool ans;
+	uint8_t c = usart_data->usart->DATA;
+	uint8_t tempRX_Head = (usart_data->buffer.RX_Head + 1) & USART_RX_BUFFER_MASK;
 
-	bufPtr = &usart_data->buffer;
-	/* Advance buffer head. */
-	uint8_t tempRX_Head = (bufPtr->RX_Head + 1) & USART_RX_BUFFER_MASK;
-
-	/* Check for overflow. */
-	uint8_t tempRX_Tail = bufPtr->RX_Tail;
-	uint8_t data = usart_data->usart->DATA;
-
-	if (tempRX_Head == tempRX_Tail) {
-	  	ans = false;
-	}else{
-		ans = true;
-		usart_data->buffer.RX[usart_data->buffer.RX_Head] = data;
-		usart_data->buffer.RX_Head = tempRX_Head;
-		USART_TXBuffer_PutByte(usart_data, data);
-		if (data == '\r')
-			USART_TXBuffer_PutByte(usart_data, '\n');
+	if (c == '\r') { //replace cr with newline
+		c = '\n';
 	}
-	return ans;
+
+	if (c == '\b' || c == '\x7f') { //backspace or delete
+		if (usart_data->buffer.RX_Head == usart_data->buffer.RX_Tail) { // empty buffer
+			USART_TXBuffer_PutByte(usart_data, '\a');
+		}
+		else {
+			USART_TXBuffer_PutByte(usart_data, c); // remove char from buffer
+			usart_data->buffer.RX[usart_data->buffer.RX_Head] = 0;
+			usart_data->buffer.RX_Head = (usart_data->buffer.RX_Head - 1) & USART_RX_BUFFER_MASK;
+		}
+	}
+	else if (tempRX_Head == usart_data->buffer.RX_Tail) { // full buffer
+		USART_TXBuffer_PutByte(usart_data, '\a');
+	}
+	else {
+		USART_TXBuffer_PutByte(usart_data, c); // normal case, put char in buffer
+		usart_data->buffer.RX[usart_data->buffer.RX_Head] = c;
+		usart_data->buffer.RX_Head = tempRX_Head;
+	}
+
+	if (c == '\n' && tempRX_Head != usart_data->buffer.RX_Tail) { // newline: flag cli task
+		USART_TXBuffer_PutByte(usart_data, '\r');
+		taskflags |= Task_CLI_bm;
+	}
+	return true;
 }
 
 
@@ -262,7 +278,7 @@ bool USART_RXComplete(USART_data_t * usart_data)
  *
  *  \param usart_data      The USART_data_t struct instance.
  */
-void USART_DataRegEmpty(USART_data_t * usart_data)
+static inline void USART_DataRegEmpty(USART_data_t * usart_data)
 {
 	USART_Buffer_t * bufPtr;
 	bufPtr = &usart_data->buffer;
@@ -294,7 +310,8 @@ void USART_DataRegEmpty(USART_data_t * usart_data)
  *  \param usart      The USART module.
  *  \param data       The data to send.
  */
-void USART_NineBits_PutChar(USART_t * usart, uint16_t data)
+/*
+static void USART_NineBits_PutChar(USART_t * usart, uint16_t data)
 {
 	if(data & 0x0100) {
 		usart->CTRLB |= USART_TXB8_bm;
@@ -304,7 +321,7 @@ void USART_NineBits_PutChar(USART_t * usart, uint16_t data)
 
 	usart->DATA = (data & 0x00FF);
 }
-
+*/
 
 /*! \brief Get received data (9 bit character).
  *
@@ -315,7 +332,8 @@ void USART_NineBits_PutChar(USART_t * usart, uint16_t data)
  *
  *  \retval           Received data.
  */
-uint16_t USART_NineBits_GetChar(USART_t * usart)
+/*
+static uint16_t USART_NineBits_GetChar(USART_t * usart)
 {
 	if(usart->CTRLB & USART_RXB8_bm) {
 		return(0x0100 | usart->DATA);
@@ -323,31 +341,31 @@ uint16_t USART_NineBits_GetChar(USART_t * usart)
 		return(usart->DATA);
 	}
 }
-
-
-
-USART_data_t USART_data;
+*/
 
 static int uart_putchar (char c, FILE *stream)
 {
 	if (c == '\n')
-	uart_putchar('\r', stream);
+		uart_putchar('\r', stream);
 	
 	USART_TXBuffer_PutByte(&USART_data, c);
 	
 	return 0;
 }
 
+
 static int uart_getchar(FILE *stream)
 {
-	char data = USART_RXBuffer_GetByte(&USART_data);
-	if(data == '\r')
-	data = '\n';
-	uart_putchar(data, stream); //Send to console what has been received, so we can see when typing
+	uint8_t data;
+	(void)stream;
+
+	while (!USART_RXBufferData_Available(&USART_data)) {};
+
+	data = USART_RXBuffer_GetByte(&USART_data);
+
 	return data;
 }
 
-FILE usart_stream = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 
 void USART_init(USART_t * usart)
 {
