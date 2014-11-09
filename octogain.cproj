@@ -117,10 +117,16 @@
     <Compile Include="board.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="cli.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="clksys_driver.c">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="clksys_driver.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="cli.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="main.c">

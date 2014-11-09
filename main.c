@@ -10,6 +10,7 @@
 #include "board.h"
 #include "clksys_driver.h"
 #include "usart_driver.h"
+#include "cli.h"
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -24,8 +25,6 @@ Task_flag_t taskflags = 0;
 
 int main(void)
 {
-	char cmdbuf[10] = {0,0,0,0,0,0,0,0,0,0};
-	
 	LED_PORT.DIRSET = LED_PIN_bm;
 	
 	CLKSYS_Enable( OSC_RC32MEN_bm );
@@ -47,10 +46,10 @@ int main(void)
 	{
 		//_delay_ms(100);  // Wait for 500ms
 		sleep();
-		if (taskflags) {
-			fgets(cmdbuf, 10, stdin);
-			printf("%s", cmdbuf);
-			taskflags = 0;
+		if (taskflags & Task_CLI_bm) {
+			if (cli_task()) {
+				taskflags &= ~Task_CLI_bm;
+			}
 		}
 		LED_PORT.OUTTGL = LED_PIN_bm;
 	}
