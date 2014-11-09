@@ -21,11 +21,10 @@ typedef struct {
 	const Task_flag_t bitmask;
 } Tasklist_t;
 
-static const char welcomeMsg[] = "Welcome to Octogain!\n>";
+void cmd_help(void);
 
 Task_flag_t taskflags = 0;
-
-#define sleep() __asm__ __volatile__ ("sleep")
+const char welcomeMsg[] = "\nWelcome to Octogain!\nType help for list of commands\n";
 
 int main(void)
 {
@@ -47,12 +46,14 @@ int main(void)
 	SLEEP.CTRL = (SLEEP.CTRL & ~SLEEP_SMODE_gm) | SLEEP_SMODE_IDLE_gc;
 	SLEEP.CTRL |= SLEEP_SEN_bm;
 
+    register_cli_command("help", cmd_help, cmd_help);
+
 	USART_init(&USARTD0);
 
 	// Enable global interrupts
 	sei();
 
-	printf("%s", welcomeMsg);
+	printf("%s%s", welcomeMsg, CLI_PROMPT);
 
 	while(1)
 	{
@@ -68,6 +69,12 @@ int main(void)
             }
         }
         LED_PORT.OUTTGL = LED_PIN_bm;
-        sleep();
+        __asm__ __volatile__ ("sleep");
     }
+}
+
+
+void cmd_help(void)
+{
+    printf("cmd_help\n");
 }
