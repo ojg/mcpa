@@ -16,6 +16,10 @@
 #include <util/delay.h>
 #include <stdio.h>
 
+typedef struct {
+	bool (*taskfunc)(void);
+	const Task_flag_t bitmask;
+} Tasklist_t;
 
 static const char welcomeMsg[] = "Welcome to Octogain!\n>";
 
@@ -25,6 +29,14 @@ Task_flag_t taskflags = 0;
 
 int main(void)
 {
+	int i;
+
+	Tasklist_t tasklist[] =
+	{
+		{cli_task, Task_CLI_bm},
+        {NULL, 0}
+	};
+
 	LED_PORT.DIRSET = LED_PIN_bm;
 	
 	CLKSYS_Enable( OSC_RC32MEN_bm );
@@ -44,13 +56,18 @@ int main(void)
 
 	while(1)
 	{
-		//_delay_ms(100);  // Wait for 500ms
-		sleep();
-		if (taskflags & Task_CLI_bm) {
-			if (cli_task()) {
-				taskflags &= ~Task_CLI_bm;
-			}
-		}
-		LED_PORT.OUTTGL = LED_PIN_bm;
-	}
+        while (taskflags) { //run as long as any taskflag is set
+            i=0;
+            while (tasklist[i].taskfunc) { // go through all tasks
+                if (taskflags & tasklist[i].bitmask) { //check taskflag
+                    if (tasklist[i].taskfunc()) { //run taskfunction
+                        taskflags &= ~tasklist[i].bitmask; //if it returns true (done), clear the taskflag
+                    }
+                }
+                i++;
+            }
+        }
+        LED_PORT.OUTTGL = LED_PIN_bm;
+        sleep();
+    }
 }
