@@ -21,7 +21,6 @@ typedef struct {
 	const Task_flag_t bitmask;
 } Tasklist_t;
 
-void cmd_help(void);
 
 Task_flag_t taskflags = 0;
 const char welcomeMsg[] = "\nWelcome to Octogain!\nType help for list of commands\n";
@@ -71,10 +70,4 @@ int main(void)
         LED_PORT.OUTTGL = LED_PIN_bm;
         __asm__ __volatile__ ("sleep");
     }
-}
-
-
-void cmd_help(void)
-{
-    printf("cmd_help\n");
 }

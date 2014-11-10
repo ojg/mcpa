@@ -20,13 +20,12 @@ uint8_t numcmd = 0;
 
 bool cli_task(void)
 {
-    int i;
-
     // read line from uart
+    memset(cmdbuf, 0, 128 * sizeof(char));
 	fgets(cmdbuf, 127, stdin);
 
     // parse command
-    i=0;
+    int i=0;
     while (i < numcmd && strncmp(cmdbuf, cmdlist[i].cmdstr, cmdlist[i].cmdstrlen)) { i++; };
 
     if (i == numcmd) { //cmd not found
@@ -35,17 +34,37 @@ bool cli_task(void)
         return true;
     }
 
-    cmdlist[i].cmdfunc();
+    cmdlist[i].cmdfunc(&cmdbuf[cmdlist[i].cmdstrlen+1]); // pass rest of string to command function
 
     printf(CLI_PROMPT);
 	return true;
 }
 
-void register_cli_command(char * cmdstr, void (*cmdfunc)(void), void (*cmdhelp)(void))
+void register_cli_command(char * cmdstr, void (*cmdfunc)(char*), void (*cmdhelp)(void))
 {
     cmdlist[numcmd].cmdstr = cmdstr;
     cmdlist[numcmd].cmdstrlen = strlen(cmdstr);
     cmdlist[numcmd].cmdhelp = cmdhelp;
     cmdlist[numcmd].cmdfunc = cmdfunc;
     numcmd++;
+}
+
+void cmd_help(char * stropt)
+{
+    //printf("cmd_help on %s\n", stropt);
+    if (*stropt == '\n' || *stropt == 0) {
+        printf("print all commands here\n");
+        return;
+    }
+
+    // parse stropt
+    int i=0;
+    while (i < numcmd && !strstr(stropt, cmdlist[i].cmdstr)) { i++; };
+
+    if (i == numcmd) { //cmd not found
+        printf("Could not find help for %s", stropt);
+        return;
+    }
+
+    cmdlist[i].cmdhelp(); // run help function for this command
 }
