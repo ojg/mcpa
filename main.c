@@ -14,7 +14,6 @@
 #include "cli.h"
 
 #include <avr/io.h>
-#include <util/delay.h>
 #include <stdio.h>
 
 typedef struct {
@@ -84,17 +83,35 @@ int main(void)
 
 
 void cmd_iicr(char * stropt) {
-    uint8_t cs3318_regaddr = 0x81;
-	TWI_MasterWriteRead(&twiMaster, 0x40, &cs3318_regaddr, 1, 1);
+    int slaveaddr, numbytes, numparams;
+    uint8_t regaddr;
+
+    numparams = sscanf(stropt, "%i %i %i\n", &slaveaddr, (int*)&regaddr, &numbytes);
+    if (numparams == 2) numbytes = 1;
+    if (numparams < 2 || numparams > 3) {
+        printf("Unknown options\n");
+        cmd_iicr_help();
+        return;
+    }
+    if (numbytes > TWIM_READ_BUFFER_SIZE) {
+        printf("Too many bytes\n");
+        return;
+    }
+
+	TWI_MasterWriteRead(&twiMaster, slaveaddr, &regaddr, 1, numbytes);
 
 	while (twiMaster.status != TWIM_STATUS_READY) {
     	/* Wait until transaction is complete. */
 	}
-    printf("0x%02X\n", twiMaster.readData[0]);
+
+    for (int i=0; i<numbytes; i++) {
+        printf("0x%02X ", twiMaster.readData[i]);
+    }
+    printf("\n");
 }
 
 void cmd_iicr_help() {
-    printf("iicr help text\n");
+    printf("iicr [chip address] [register address] [number of bytes]\n");
 }    
 
 ISR(TWIC_TWIM_vect)

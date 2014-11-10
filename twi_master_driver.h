@@ -82,8 +82,8 @@ typedef enum TWIM_RESULT_enum {
 } TWIM_RESULT_t;
 
 /*! Buffer size defines */
-#define TWIM_WRITE_BUFFER_SIZE         8
-#define TWIM_READ_BUFFER_SIZE          8
+#define TWIM_WRITE_BUFFER_SIZE         32
+#define TWIM_READ_BUFFER_SIZE          32
 
 
 /*! \brief TWI master driver struct
@@ -110,7 +110,7 @@ void TWI_MasterInit(TWI_Master_t *twi,
                     TWI_t *module,
                     TWI_MASTER_INTLVL_t intLevel,
                     uint8_t baudRateRegisterSetting);
-TWI_MASTER_BUSSTATE_t TWI_MasterState(TWI_Master_t *twi);
+//TWI_MASTER_BUSSTATE_t TWI_MasterState(TWI_Master_t *twi);
 bool TWI_MasterReady(TWI_Master_t *twi);
 bool TWI_MasterWrite(TWI_Master_t *twi,
                      uint8_t address,
@@ -125,10 +125,10 @@ bool TWI_MasterWriteRead(TWI_Master_t *twi,
                          uint8_t bytesToWrite,
                          uint8_t bytesToRead);
 void TWI_MasterInterruptHandler(TWI_Master_t *twi);
-void TWI_MasterArbitrationLostBusErrorHandler(TWI_Master_t *twi);
-void TWI_MasterWriteHandler(TWI_Master_t *twi);
-void TWI_MasterReadHandler(TWI_Master_t *twi);
-void TWI_MasterTransactionFinished(TWI_Master_t *twi, uint8_t result);
+//void TWI_MasterArbitrationLostBusErrorHandler(TWI_Master_t *twi);
+//void TWI_MasterWriteHandler(TWI_Master_t *twi);
+//void TWI_MasterReadHandler(TWI_Master_t *twi);
+//void TWI_MasterTransactionFinished(TWI_Master_t *twi, uint8_t result);
 
 
 /*! TWI master interrupt service routine.

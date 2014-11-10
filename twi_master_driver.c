@@ -106,14 +106,15 @@ void TWI_MasterInit(TWI_Master_t *twi,
  *  \retval TWI_MASTER_BUSSTATE_OWNER_gc   Bus state is owned by the master.
  *  \retval TWI_MASTER_BUSSTATE_BUSY_gc    Bus state is busy.
  */
-TWI_MASTER_BUSSTATE_t TWI_MasterState(TWI_Master_t *twi)
+/*
+static TWI_MASTER_BUSSTATE_t TWI_MasterState(TWI_Master_t *twi)
 {
 	TWI_MASTER_BUSSTATE_t twi_status;
 	twi_status = (TWI_MASTER_BUSSTATE_t) (twi->interface->MASTER.STATUS &
 	                                      TWI_MASTER_BUSSTATE_gm);
 	return twi_status;
 }
-
+*/
 
 /*! \brief Returns true if transaction is ready.
  *
@@ -243,47 +244,13 @@ bool TWI_MasterWriteRead(TWI_Master_t *twi,
 }
 
 
-/*! \brief Common TWI master interrupt service routine.
- *
- *  Check current status and calls the appropriate handler.
- *
- *  \param twi  The TWI_Master_t struct instance.
- */
-void TWI_MasterInterruptHandler(TWI_Master_t *twi)
-{
-	uint8_t currentStatus = twi->interface->MASTER.STATUS;
-
-	/* If arbitration lost or bus error. */
-	if ((currentStatus & TWI_MASTER_ARBLOST_bm) ||
-	    (currentStatus & TWI_MASTER_BUSERR_bm)) {
-
-		TWI_MasterArbitrationLostBusErrorHandler(twi);
-	}
-
-	/* If master write interrupt. */
-	else if (currentStatus & TWI_MASTER_WIF_bm) {
-		TWI_MasterWriteHandler(twi);
-	}
-
-	/* If master read interrupt. */
-	else if (currentStatus & TWI_MASTER_RIF_bm) {
-		TWI_MasterReadHandler(twi);
-	}
-
-	/* If unexpected state. */
-	else {
-		TWI_MasterTransactionFinished(twi, TWIM_RESULT_FAIL);
-	}
-}
-
-
 /*! \brief TWI master arbitration lost and bus error interrupt handler.
  *
  *  Handles TWI responses to lost arbitration and bus error.
  *
  *  \param twi  The TWI_Master_t struct instance.
  */
-void TWI_MasterArbitrationLostBusErrorHandler(TWI_Master_t *twi)
+static void TWI_MasterArbitrationLostBusErrorHandler(TWI_Master_t *twi)
 {
 	uint8_t currentStatus = twi->interface->MASTER.STATUS;
 
@@ -303,13 +270,27 @@ void TWI_MasterArbitrationLostBusErrorHandler(TWI_Master_t *twi)
 }
 
 
+/*! \brief TWI transaction finished handler.
+ *
+ *  Prepares module for new transaction.
+ *
+ *  \param twi     The TWI_Master_t struct instance.
+ *  \param result  The result of the operation.
+ */
+static void TWI_MasterTransactionFinished(TWI_Master_t *twi, uint8_t result)
+{
+	twi->result = result;
+	twi->status = TWIM_STATUS_READY;
+}
+
+
 /*! \brief TWI master write interrupt handler.
  *
  *  Handles TWI transactions (master write) and responses to (N)ACK.
  *
  *  \param twi The TWI_Master_t struct instance.
  */
-void TWI_MasterWriteHandler(TWI_Master_t *twi)
+static void TWI_MasterWriteHandler(TWI_Master_t *twi)
 {
 	/* Local variables used in if tests to avoid compiler warning. */
 	uint8_t bytesToWrite  = twi->bytesToWrite;
@@ -352,7 +333,7 @@ void TWI_MasterWriteHandler(TWI_Master_t *twi)
  *
  *  \param twi The TWI_Master_t struct instance.
  */
-void TWI_MasterReadHandler(TWI_Master_t *twi)
+static void TWI_MasterReadHandler(TWI_Master_t *twi)
 {
 	/* Fetch data if bytes to be read. */
 	if (twi->bytesRead < TWIM_READ_BUFFER_SIZE) {
@@ -384,18 +365,36 @@ void TWI_MasterReadHandler(TWI_Master_t *twi)
 }
 
 
-/*! \brief TWI transaction finished handler.
+/*! \brief Common TWI master interrupt service routine.
  *
- *  Prepares module for new transaction.
+ *  Check current status and calls the appropriate handler.
  *
- *  \param twi     The TWI_Master_t struct instance.
- *  \param result  The result of the operation.
+ *  \param twi  The TWI_Master_t struct instance.
  */
-void TWI_MasterTransactionFinished(TWI_Master_t *twi, uint8_t result)
+void TWI_MasterInterruptHandler(TWI_Master_t *twi)
 {
-	twi->result = result;
-	twi->status = TWIM_STATUS_READY;
+	uint8_t currentStatus = twi->interface->MASTER.STATUS;
+
+	/* If arbitration lost or bus error. */
+	if ((currentStatus & TWI_MASTER_ARBLOST_bm) ||
+	    (currentStatus & TWI_MASTER_BUSERR_bm)) {
+
+		TWI_MasterArbitrationLostBusErrorHandler(twi);
+	}
+
+	/* If master write interrupt. */
+	else if (currentStatus & TWI_MASTER_WIF_bm) {
+		TWI_MasterWriteHandler(twi);
+	}
+
+	/* If master read interrupt. */
+	else if (currentStatus & TWI_MASTER_RIF_bm) {
+		TWI_MasterReadHandler(twi);
+	}
+
+	/* If unexpected state. */
+	else {
+		TWI_MasterTransactionFinished(twi, TWIM_RESULT_FAIL);
+	}
 }
-
-
 
