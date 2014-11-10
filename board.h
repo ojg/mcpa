@@ -20,6 +20,10 @@
 #define USART_RXC_vect USARTD0_RXC_vect
 #define USART_DRE_vect USARTD0_DRE_vect
 
+#define TWI_SDA_PIN_bm PIN0_bm
+#define TWI_SCL_PIN_bm PIN1_bm
+#define TWI_PORT PORTC
+
 typedef volatile uint8_t Task_flag_t;
 #define Task_CLI_bm 1
 

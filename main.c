@@ -10,6 +10,7 @@
 #include "board.h"
 #include "clksys_driver.h"
 #include "usart_driver.h"
+#include "twi_master_driver.h"
 #include "cli.h"
 
 #include <avr/io.h>
@@ -21,6 +22,10 @@ typedef struct {
 	const Task_flag_t bitmask;
 } Tasklist_t;
 
+void cmd_iicr(char * stropt);
+void cmd_iicr_help();
+
+TWI_Master_t twiMaster;    /*!< TWI master module. */
 
 Task_flag_t taskflags = 0;
 const char welcomeMsg[] = "\nWelcome to Octogain!\nType help for list of commands\n";
@@ -46,8 +51,13 @@ int main(void)
 	SLEEP.CTRL |= SLEEP_SEN_bm;
 
     register_cli_command("help", cmd_help, cmd_help);
+    register_cli_command("iicr", cmd_iicr, cmd_iicr_help);
 
+    /* Initialize debug USART */
 	USART_init(&USARTD0);
+    
+	/* Initialize TWI master. */
+	TWI_MasterInit(&twiMaster, &TWIC, TWI_MASTER_INTLVL_LO_gc, TWI_BAUD(F_CPU, 100000));
 
 	// Enable global interrupts
 	sei();
@@ -70,4 +80,24 @@ int main(void)
         LED_PORT.OUTTGL = LED_PIN_bm;
         __asm__ __volatile__ ("sleep");
     }
+}
+
+
+void cmd_iicr(char * stropt) {
+    uint8_t cs3318_regaddr = 0x81;
+	TWI_MasterWriteRead(&twiMaster, 0x40, &cs3318_regaddr, 1, 1);
+
+	while (twiMaster.status != TWIM_STATUS_READY) {
+    	/* Wait until transaction is complete. */
+	}
+    printf("0x%02X\n", twiMaster.readData[0]);
+}
+
+void cmd_iicr_help() {
+    printf("iicr help text\n");
+}    
+
+ISR(TWIC_TWIM_vect)
+{
+    TWI_MasterInterruptHandler(&twiMaster);
 }
