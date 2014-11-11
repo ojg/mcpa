@@ -15,6 +15,7 @@
 
 #include <avr/io.h>
 #include <stdio.h>
+#include <string.h>
 
 typedef struct {
 	bool (*taskfunc)(void);
@@ -124,41 +125,59 @@ void cs3318_setVolReg(uint8_t regaddr, q13_2 volume_in_db_x4)
 
 void cmd_MasterVol(char * stropt)
 {
-    int numparams, msd, lsd, sign = 0;
-    q13_2 volume_in_db_x4;
+    int numparams, msd, lsd, sign = 0, vol_stepsize = 2;
+    char subcmd[5];
 
-    numparams = sscanf(stropt, "%d.%d\n", &msd, &lsd);
-    if (numparams < 1 || numparams > 2) {
+    numparams = sscanf(stropt, "%4s %d.%d\n", subcmd, &msd, &lsd);
+    if (numparams < 1 || numparams > 3) {
         printf("Unknown options\n");
         cmd_MasterVol_help();
         return;
     }
-  
-    volume_in_db_x4 = ((q13_2)msd) << 2;
     
-    if (msd < 0) 
-        sign = -1;
-    
-    if (lsd >= 75) {
-        volume_in_db_x4 += sign * 3;
+    if (!strncmp(subcmd, "up", 2)) {
+        msd = cs3318_read(0x11);
+        msd += vol_stepsize;
+        cs3318_write(0x11, msd);
     }
-    else if (lsd >= 50 || lsd == 5) {
-        volume_in_db_x4 += sign * 2;
+    else if (!strncmp(subcmd, "down", 4)) {
+        msd = cs3318_read(0x11);
+        msd -= vol_stepsize;
+        cs3318_write(0x11, msd);
     }
-    else if (lsd >= 25) {
-        volume_in_db_x4 += sign * 1;
+    else if (!strncmp(subcmd, "set", 3)) {
+        q13_2 volume_in_db_x4 = ((q13_2)msd) << 2;
+
+        if (msd < 0)
+            sign = -1;
+
+        if (lsd >= 75) {
+            volume_in_db_x4 += sign * 3;
+        }
+        else if (lsd >= 50 || lsd == 5) {
+            volume_in_db_x4 += sign * 2;
+        }
+        else if (lsd >= 25) {
+            volume_in_db_x4 += sign * 1;
+        }
+
+        if (volume_in_db_x4 > (22 * 4) || volume_in_db_x4 < (-96 * 4)) {
+            printf("Value outside range 22 to -96dB\n");
+            return;
+        }
+
+        cs3318_setVolReg(0x11, volume_in_db_x4);
     }
-    
-    if (volume_in_db_x4 > (22 * 4) || volume_in_db_x4 < (-96 * 4)) {
-        printf("Value outside range 22 to -96dB\n");
-        return;
+    else {
+        printf("Unknown sub-command\n");
+        cmd_MasterVol_help();
     }
-    
-    cs3318_setVolReg(0x11, volume_in_db_x4);
 }
 
 void cmd_MasterVol_help()
 {
-    printf("vol [value in dB]\nExample: vol -23.75\n");
-    
+    printf("vol set [value in dB]\n");
+    printf("vol up\n");
+    printf("vol down\n");
+    printf("Example: vol set -23.75\n");
 }
