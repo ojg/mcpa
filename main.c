@@ -23,6 +23,8 @@ typedef struct {
 
 void cmd_iicr(char * stropt);
 void cmd_iicr_help();
+void cmd_iicw(char * stropt);
+void cmd_iicw_help();
 
 TWI_Master_t twiMaster;    /*!< TWI master module. */
 
@@ -51,6 +53,7 @@ int main(void)
 
     register_cli_command("help", cmd_help, cmd_help);
     register_cli_command("iicr", cmd_iicr, cmd_iicr_help);
+    register_cli_command("iicw", cmd_iicw, cmd_iicw_help);
 
     /* Initialize debug USART */
 	USART_init(&USARTD0);
@@ -113,6 +116,32 @@ void cmd_iicr(char * stropt) {
 void cmd_iicr_help() {
     printf("iicr [chip address] [register address] [number of bytes]\n");
 }    
+
+
+void cmd_iicw(char * stropt) {
+    int slaveaddr, numparams, data[2];
+    //uint8_t data[2];
+
+    numparams = sscanf(stropt, "%i %i %i\n", &slaveaddr, &data[0], &data[1]);
+    if (numparams != 3) {
+        printf("Unknown options\n");
+        cmd_iicw_help();
+        return;
+    }
+
+    TWI_MasterWrite(&twiMaster, slaveaddr, (uint8_t*)data, 2);
+
+    while (twiMaster.status != TWIM_STATUS_READY) {
+        /* Wait until transaction is complete. */
+    }
+
+    printf("Wrote 0x%02X to 0x%02X-0x%02X\n", data[1], slaveaddr, data[0]);
+}
+
+void cmd_iicw_help() {
+    printf("iicw [chip address] [register address] [value]\n");
+}
+
 
 ISR(TWIC_TWIM_vect)
 {

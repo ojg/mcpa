@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#define MAX_CMD 2
+#define MAX_CMD 16
 
 char cmdbuf[128];
 
