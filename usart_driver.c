@@ -154,24 +154,20 @@ static bool USART_TXBuffer_PutByte(USART_data_t * usart_data, uint8_t data)
 	uint8_t tempCTRLA;
 	uint8_t tempTX_Head;
 	bool TXBuffer_FreeSpace;
-	USART_Buffer_t * TXbufPtr;
+	USART_Buffer_t * TXbufPtr = &usart_data->buffer;
 
-	TXbufPtr = &usart_data->buffer;
-	TXBuffer_FreeSpace = USART_TXBuffer_FreeSpace(usart_data);
+	while (!USART_TXBuffer_FreeSpace(usart_data)) {} //block on wait for free space
 
+	tempTX_Head = TXbufPtr->TX_Head;
+	TXbufPtr->TX[tempTX_Head]= data;
+	/* Advance buffer head. */
+	TXbufPtr->TX_Head = (tempTX_Head + 1) & USART_TX_BUFFER_MASK;
 
-	if(TXBuffer_FreeSpace)
-	{
-	  	tempTX_Head = TXbufPtr->TX_Head;
-	  	TXbufPtr->TX[tempTX_Head]= data;
-		/* Advance buffer head. */
-		TXbufPtr->TX_Head = (tempTX_Head + 1) & USART_TX_BUFFER_MASK;
+	/* Enable DRE interrupt. */
+	tempCTRLA = usart_data->usart->CTRLA;
+	tempCTRLA = (tempCTRLA & ~USART_DREINTLVL_gm) | usart_data->dreIntLevel;
+	usart_data->usart->CTRLA = tempCTRLA;
 
-		/* Enable DRE interrupt. */
-		tempCTRLA = usart_data->usart->CTRLA;
-		tempCTRLA = (tempCTRLA & ~USART_DREINTLVL_gm) | usart_data->dreIntLevel;
-		usart_data->usart->CTRLA = tempCTRLA;
-	}
 	return TXBuffer_FreeSpace;
 }
 
