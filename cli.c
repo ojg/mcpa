@@ -51,9 +51,12 @@ void register_cli_command(char * cmdstr, void (*cmdfunc)(char*), void (*cmdhelp)
 
 void cmd_help(char * stropt)
 {
-    //printf("cmd_help on %s\n", stropt);
     if (*stropt == '\n' || *stropt == 0) {
-        printf("print all commands here\n");
+        printf("Available commands:\n");
+        for (int i=0; i<numcmd; i++) {
+            printf("%s\n", cmdlist[i].cmdstr);
+        }
+        printf("Type help <command> to get help for that command.\n");
         return;
     }
 
