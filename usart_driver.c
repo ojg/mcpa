@@ -153,7 +153,6 @@ static bool USART_TXBuffer_PutByte(USART_data_t * usart_data, uint8_t data)
 {
 	uint8_t tempCTRLA;
 	uint8_t tempTX_Head;
-	bool TXBuffer_FreeSpace;
 	USART_Buffer_t * TXbufPtr = &usart_data->buffer;
 
 	while (!USART_TXBuffer_FreeSpace(usart_data)) {} //block on wait for free space
@@ -168,7 +167,7 @@ static bool USART_TXBuffer_PutByte(USART_data_t * usart_data, uint8_t data)
 	tempCTRLA = (tempCTRLA & ~USART_DREINTLVL_gm) | usart_data->dreIntLevel;
 	usart_data->usart->CTRLA = tempCTRLA;
 
-	return TXBuffer_FreeSpace;
+	return true;
 }
 
 
