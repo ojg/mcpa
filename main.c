@@ -21,12 +21,6 @@ typedef struct {
 	const Task_flag_t bitmask;
 } Tasklist_t;
 
-void cmd_iicr(char * stropt);
-void cmd_iicr_help();
-void cmd_iicw(char * stropt);
-void cmd_iicw_help();
-
-TWI_Master_t twiMaster;    /*!< TWI master module. */
 
 Task_flag_t taskflags = 0;
 const char welcomeMsg[] = "\nWelcome to Octogain!\nType help for list of commands\n";
@@ -34,7 +28,7 @@ const char welcomeMsg[] = "\nWelcome to Octogain!\nType help for list of command
 int main(void)
 {
 	int i;
-
+    
 	Tasklist_t tasklist[] =
 	{
 		{cli_task, Task_CLI_bm},
@@ -59,7 +53,7 @@ int main(void)
 	USART_init(&USARTD0);
     
 	/* Initialize TWI master. */
-	TWI_MasterInit(&twiMaster, &TWIC, TWI_MASTER_INTLVL_LO_gc, TWI_BAUD(F_CPU, 100000));
+	TWI_MasterInit(&TWIC, TWI_MASTER_INTLVL_LO_gc, TWI_BAUD(F_CPU, 100000));
 
 	// Enable global interrupts
 	sei();
@@ -84,66 +78,3 @@ int main(void)
     }
 }
 
-
-void cmd_iicr(char * stropt) {
-    int slaveaddr, numbytes, numparams;
-    uint8_t regaddr;
-
-    numparams = sscanf(stropt, "%i %i %i\n", &slaveaddr, (int*)&regaddr, &numbytes);
-    if (numparams == 2) numbytes = 1;
-    if (numparams < 2 || numparams > 3) {
-        printf("Unknown options\n");
-        cmd_iicr_help();
-        return;
-    }
-    if (numbytes > TWIM_READ_BUFFER_SIZE) {
-        printf("Too many bytes\n");
-        return;
-    }
-
-	TWI_MasterWriteRead(&twiMaster, slaveaddr, &regaddr, 1, numbytes);
-
-	while (twiMaster.status != TWIM_STATUS_READY) {
-    	/* Wait until transaction is complete. */
-	}
-
-    for (int i=0; i<numbytes; i++) {
-        printf("0x%02X ", twiMaster.readData[i]);
-    }
-    printf("\n");
-}
-
-void cmd_iicr_help() {
-    printf("iicr [chip address] [register address] [number of bytes]\n");
-}    
-
-
-void cmd_iicw(char * stropt) {
-    int slaveaddr, numparams, data[2];
-    //uint8_t data[2];
-
-    numparams = sscanf(stropt, "%i %i %i\n", &slaveaddr, &data[0], &data[1]);
-    if (numparams != 3) {
-        printf("Unknown options\n");
-        cmd_iicw_help();
-        return;
-    }
-
-    TWI_MasterWrite(&twiMaster, slaveaddr, (uint8_t*)data, 2);
-
-    while (twiMaster.status != TWIM_STATUS_READY) {
-        /* Wait until transaction is complete. */
-    }
-
-    printf("Wrote 0x%02X to 0x%02X-0x%02X\n", data[1], slaveaddr, data[0]);
-}
-
-void cmd_iicw_help() {
-    printf("iicw [chip address] [register address] [value]\n");
-}
-
-
-ISR(TWIC_TWIM_vect)
-{
-    TWI_MasterInterruptHandler(&twiMaster);
-}

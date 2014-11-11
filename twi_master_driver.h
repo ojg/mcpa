@@ -106,8 +106,7 @@ typedef struct TWI_Master {
 
 
 
-void TWI_MasterInit(TWI_Master_t *twi,
-                    TWI_t *module,
+void TWI_MasterInit(TWI_t *module,
                     TWI_MASTER_INTLVL_t intLevel,
                     uint8_t baudRateRegisterSetting);
 //TWI_MASTER_BUSSTATE_t TWI_MasterState(TWI_Master_t *twi);
@@ -129,6 +128,12 @@ void TWI_MasterInterruptHandler(TWI_Master_t *twi);
 //void TWI_MasterWriteHandler(TWI_Master_t *twi);
 //void TWI_MasterReadHandler(TWI_Master_t *twi);
 //void TWI_MasterTransactionFinished(TWI_Master_t *twi, uint8_t result);
+
+void cmd_iicr(char * stropt);
+void cmd_iicr_help();
+void cmd_iicw(char * stropt);
+void cmd_iicw_help();
+
 
 
 /*! TWI master interrupt service routine.
