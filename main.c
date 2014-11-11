@@ -119,13 +119,39 @@ void cs3318_setVolReg(uint8_t regaddr, q13_2 volume_in_db_x4)
         cs3318_write(regaddr+1, (cs3318_read(regaddr+1) & 0xFE) | quarterdb_val);
     }        
     else {
-        cs3318_write(0x09, (cs3318_read(0x09) & (1 << regaddr)) | (quarterdb_val << regaddr));
+        regaddr--;
+        cs3318_write(0x09, (cs3318_read(0x09) & ~(1 << regaddr)) | (quarterdb_val << regaddr));
     }
+}
+
+static q13_2 dB_to_q13_2(int msd, int lsd)
+{
+    int sign = 1;
+    q13_2 volume_in_db_x4 = ((q13_2)msd) << 2;
+
+    if (msd < 0)
+        sign = -1;
+
+    if (lsd >= 75) {
+        volume_in_db_x4 += sign * 3;
+    }
+    else if (lsd >= 50 || lsd == 5) {
+        volume_in_db_x4 += sign * 2;
+    }
+    else if (lsd >= 25) {
+        volume_in_db_x4 += sign * 1;
+    }
+
+    if (volume_in_db_x4 > (22 * 4) || volume_in_db_x4 < (-96 * 4)) {
+        printf("Value outside range 22 to -96dB\n");
+        volume_in_db_x4 = -96 * 4;
+    }
+    return volume_in_db_x4;
 }
 
 void cmd_MasterVol(char * stropt)
 {
-    int numparams, msd, lsd, sign = 0, vol_stepsize = 2;
+    int numparams, msd, lsd, vol_stepsize = 2;
     char subcmd[5];
 
     numparams = sscanf(stropt, "%4s %d.%d\n", subcmd, &msd, &lsd);
@@ -146,27 +172,16 @@ void cmd_MasterVol(char * stropt)
         cs3318_write(0x11, msd);
     }
     else if (!strncmp(subcmd, "set", 3)) {
-        q13_2 volume_in_db_x4 = ((q13_2)msd) << 2;
-
-        if (msd < 0)
-            sign = -1;
-
-        if (lsd >= 75) {
-            volume_in_db_x4 += sign * 3;
-        }
-        else if (lsd >= 50 || lsd == 5) {
-            volume_in_db_x4 += sign * 2;
-        }
-        else if (lsd >= 25) {
-            volume_in_db_x4 += sign * 1;
-        }
-
-        if (volume_in_db_x4 > (22 * 4) || volume_in_db_x4 < (-96 * 4)) {
-            printf("Value outside range 22 to -96dB\n");
+        cs3318_setVolReg(0x11, dB_to_q13_2(msd, lsd));
+    }
+    else if (!strncmp(subcmd, "ch", 2)) {
+        int channel;
+        numparams = sscanf(subcmd, "ch%d", &channel);
+        if (numparams != 1 || channel < 1 || channel > 8) {
+            printf("Invalid channel\n");
             return;
         }
-
-        cs3318_setVolReg(0x11, volume_in_db_x4);
+        cs3318_setVolReg(channel, dB_to_q13_2(msd, lsd));
     }
     else {
         printf("Unknown sub-command\n");
@@ -176,8 +191,10 @@ void cmd_MasterVol(char * stropt)
 
 void cmd_MasterVol_help()
 {
-    printf("vol set [value in dB]\n");
     printf("vol up\n");
     printf("vol down\n");
+    printf("vol set [master value in dB]\n");
+    printf("vol ch[channel number] [offset value in dB]\n");
     printf("Example: vol set -23.75\n");
+    printf("Example: vol ch3 -2.5\n");
 }
