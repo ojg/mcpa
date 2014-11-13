@@ -46,7 +46,6 @@ int main(void)
 	CLKSYS_Disable( OSC_RC2MEN_bm | OSC_RC32KEN_bm );
 
 	SLEEP.CTRL = (SLEEP.CTRL & ~SLEEP_SMODE_gm) | SLEEP_SMODE_IDLE_gc;
-	SLEEP.CTRL |= SLEEP_SEN_bm;
 
     register_cli_command("help", cmd_help, cmd_help);
     register_cli_command("iicr", cmd_iicr, cmd_iicr_help);
@@ -78,7 +77,9 @@ int main(void)
             }
         }
         LED_PORT.OUTTGL = LED_PIN_bm;
+        SLEEP.CTRL |= SLEEP_SEN_bm;
         __asm__ __volatile__ ("sleep");
+        SLEEP.CTRL &= ~SLEEP_SEN_bm;
     }
 }
 
