@@ -24,9 +24,11 @@ typedef struct {
 
 void cmd_MasterVol(char *);
 void cmd_MasterVol_help(void);
+bool rotary_task(void);
 
 Task_flag_t taskflags = 0;
 const char welcomeMsg[] = "\nWelcome to Octogain!\nType help for list of commands\n";
+
 
 int main(void)
 {
@@ -35,6 +37,7 @@ int main(void)
 	Tasklist_t tasklist[] =
 	{
 		{cli_task, Task_CLI_bm},
+        {rotary_task, Task_Rotary_bm},
         {NULL, 0}
 	};
 
@@ -58,7 +61,15 @@ int main(void)
 	/* Initialize TWI master. */
 	TWI_MasterInit(&TWIC, TWI_MASTER_INTLVL_LO_gc, TWI_BAUD(F_CPU, 100000));
 
-	// Enable global interrupts
+    /* Set up rotary encoder input and irq */
+    ROT_PORT.DIRCLR = ROT_A_PIN_bm | ROT_B_PIN_bm;
+    ROT_PORT.PIN0CTRL = PORT_OPC_PULLUP_gc;
+    ROT_PORT.PIN1CTRL = PORT_OPC_PULLUP_gc;
+    ROT_PORT.INTMASK = ROT_A_PIN_bm | ROT_B_PIN_bm;
+    ROT_PORT.INTCTRL = PORT_INTLVL_MED_gc;
+    PMIC.CTRL |= PMIC_MEDLVLEN_bm;
+
+	/* Enable global interrupts */
 	sei();
 
 	printf("%s%s", welcomeMsg, CLI_PROMPT);
@@ -204,4 +215,39 @@ void cmd_MasterVol_help()
     printf("vol ch[channel number] [offset value in dB]\n");
     printf("Example: vol set -23.75\n");
     printf("Example: vol ch3 -2.5\n");
+}
+
+
+bool rotary_task(void)
+{
+    //direction: old,new:idx
+    //CW:  0,1:1 1,3:7 3,2:e 2,0:8
+    //CCW: 0,2:2 2,3:b 3,1:d 1,0:4
+    static int8_t direction_table[16] = {0, 1, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 0, -1, 1, 0};
+    static uint8_t current_rotaryval = 0;
+    uint8_t new_rotaryval = ROT_PORT.IN & 3;
+    int8_t direction = direction_table[current_rotaryval<<2 | new_rotaryval];
+    if (direction != 0) {
+        uint16_t volreg;
+        volreg = cs3318_read(0x11);
+        volreg += direction * vol_stepsize;
+        if (volreg < 0xfe && volreg >= 0x12)
+            cs3318_write(0x11, volreg);
+
+        //printf("%i, %i, %i\n", direction, current_rotaryval, new_rotaryval);
+        current_rotaryval = new_rotaryval;
+    }
+    return true;
+}
+
+ISR(PORTD_INT_vect)
+{
+    if (ROT_PORT.INTFLAGS & ROT_A_PIN_bm) {
+        ROT_PORT.INTFLAGS |=  ROT_A_PIN_bm;
+        taskflags |= Task_Rotary_bm;
+    }
+    else if (ROT_PORT.INTFLAGS & ROT_B_PIN_bm) {
+        ROT_PORT.INTFLAGS |=  ROT_B_PIN_bm;
+        taskflags |= Task_Rotary_bm;
+    }
 }
