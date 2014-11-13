@@ -106,7 +106,7 @@ uint8_t cs3318_read(uint8_t addr)
         /* Wait until transaction is complete. */
     }
 
-    printf("0x%02X\n", twiMaster.readData[0]);
+    //printf("0x%02X\n", twiMaster.readData[0]);
     return twiMaster.readData[0];
 }
 
@@ -150,9 +150,11 @@ static q13_2 dB_to_q13_2(int msd, int lsd)
     return volume_in_db_x4;
 }
 
+static int vol_stepsize = 2;
+
 void cmd_MasterVol(char * stropt)
 {
-    int numparams, msd, lsd, vol_stepsize = 2;
+    int numparams, msd, lsd, direction=0;
     char subcmd[5];
 
     numparams = sscanf(stropt, "%4s %d.%d\n", subcmd, &msd, &lsd);
@@ -163,14 +165,10 @@ void cmd_MasterVol(char * stropt)
     }
     
     if (!strncmp(subcmd, "up", 2)) {
-        msd = cs3318_read(0x11);
-        msd += vol_stepsize;
-        cs3318_write(0x11, msd);
+        direction = 1;
     }
     else if (!strncmp(subcmd, "down", 4)) {
-        msd = cs3318_read(0x11);
-        msd -= vol_stepsize;
-        cs3318_write(0x11, msd);
+        direction = -1;
     }
     else if (!strncmp(subcmd, "set", 3)) {
         cs3318_setVolReg(0x11, dB_to_q13_2(msd, lsd));
@@ -187,6 +185,14 @@ void cmd_MasterVol(char * stropt)
     else {
         printf("Unknown sub-command\n");
         cmd_MasterVol_help();
+    }
+
+    if (direction != 0) {
+        uint16_t volreg; //this does not step the quarter-db register
+        volreg = cs3318_read(0x11);
+        volreg += direction * vol_stepsize;
+        if (volreg < 0xfe && volreg >= 0x12)
+            cs3318_write(0x11, volreg);
     }
 }
 
