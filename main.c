@@ -34,6 +34,7 @@ int main(void)
 {
 	int i;
     
+    /* Define a list of tasks */
 	Tasklist_t tasklist[] =
 	{
 		{cli_task, Task_CLI_bm},
@@ -41,19 +42,27 @@ int main(void)
         {NULL, 0}
 	};
 
-	LED_PORT.DIRSET = LED_PIN_bm;
-	
+    /* Set clock to 32MHz */
 	CLKSYS_Enable( OSC_RC32MEN_bm );
 	do {} while ( CLKSYS_IsReady( OSC_RC32MRDY_bm ) == 0 );
 	CLKSYS_Main_ClockSource_Select( CLK_SCLKSEL_RC32M_gc );
 	CLKSYS_Disable( OSC_RC2MEN_bm | OSC_RC32KEN_bm );
 
+    /* Initialize sleep mode to idle */
 	SLEEP.CTRL = (SLEEP.CTRL & ~SLEEP_SMODE_gm) | SLEEP_SMODE_IDLE_gc;
 
+    /* Register cli command functions */
     register_cli_command("help", cmd_help, cmd_help);
     register_cli_command("iicr", cmd_iicr, cmd_iicr_help);
     register_cli_command("iicw", cmd_iicw, cmd_iicw_help);
     register_cli_command("vol", cmd_MasterVol, cmd_MasterVol_help);
+
+    /* Set debug LED pin to output */
+    LED_PORT.DIRSET = LED_PIN_bm;
+
+    /* Take CS3318 out of reset */
+    CS3318_RESET_PORT.DIRSET = CS3318_RESET_PIN_bm;
+    CS3318_RESET_PORT.OUTSET = CS3318_RESET_PIN_bm;
 
     /* Initialize debug USART */
 	USART_init(&USARTD0);
@@ -72,6 +81,7 @@ int main(void)
 	/* Enable global interrupts */
 	sei();
 
+    /* Ready to run */
 	printf("%s%s", welcomeMsg, CLI_PROMPT);
 
 	while(1)
