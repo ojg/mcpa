@@ -6,10 +6,10 @@ Firmware for the XMega on the 8 Channel Gaincontroller
 
 To-do list
 ==========
-Done: UART debug
-Done: TWI CS3318 read/write
-Done: UART commands - volume set/up/down/mute
-Done: Rotary encoder
+- [x] UART debug
+- [x] TWI CS3318 read/write
+- [x] UART commands - volume set/up/down/mute
+- [x] Rotary encoder
 - Potmeter
 - LED 4-digit
 - Char LCD 2x8
