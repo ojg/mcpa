@@ -1,15 +1,15 @@
-octogain
+Octogain
 ========
 
 Firmware for the XMega on the 8 Channel Gaincontroller
 
 
-TO-DO list
+To-do list
 ==========
-* UART debug
-* TWI CS3318 read/write
-* UART commands - volume set/up/down/mute
-* Rotary encoder
+Done: UART debug
+Done: TWI CS3318 read/write
+Done: UART commands - volume set/up/down/mute
+Done: Rotary encoder
 - Potmeter
 - LED 4-digit
 - Char LCD 2x8
