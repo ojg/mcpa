@@ -86,6 +86,7 @@ int main(void)
 
 	while(1)
 	{
+        LED_PORT.OUTCLR = LED_PIN_bm;
         while (taskflags) { //run as long as any taskflag is set
             i=0;
             while (tasklist[i].taskfunc) { // go through all tasks
@@ -97,7 +98,7 @@ int main(void)
                 i++;
             }
         }
-        LED_PORT.OUTTGL = LED_PIN_bm;
+        LED_PORT.OUTSET = LED_PIN_bm;
         SLEEP.CTRL |= SLEEP_SEN_bm;
         __asm__ __volatile__ ("sleep");
         SLEEP.CTRL &= ~SLEEP_SEN_bm;
