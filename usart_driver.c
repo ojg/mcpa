@@ -250,17 +250,27 @@ static inline bool USART_RXComplete(USART_data_t * usart_data)
 	else if (tempRX_Head == usart_data->buffer.RX_Tail) { // full buffer
 		USART_TXBuffer_PutByte(usart_data, '\a');
 	}
-	else {
-		USART_TXBuffer_PutByte(usart_data, c); // normal case, put char in buffer
-		usart_data->buffer.RX[usart_data->buffer.RX_Head] = c;
-		usart_data->buffer.RX_Head = tempRX_Head;
-	}
+	else if (c == '\n') {
+        if (usart_data->buffer.RX_Head == usart_data->buffer.RX_Tail) {
+            USART_TXBuffer_PutByte(usart_data, c);
+            USART_TXBuffer_PutByte(usart_data, '\r');
+            USART_TXBuffer_PutByte(usart_data, '>');
+        }
+        else if (tempRX_Head != usart_data->buffer.RX_Tail) { // newline: flag cli task
+            USART_TXBuffer_PutByte(usart_data, c); 
+            USART_TXBuffer_PutByte(usart_data, '\r');
+            usart_data->buffer.RX[usart_data->buffer.RX_Head] = c; // put newline in buffer
+            usart_data->buffer.RX_Head = tempRX_Head;
+            taskflags |= Task_CLI_bm;
+        }
+    }
+    else {
+        USART_TXBuffer_PutByte(usart_data, c); // normal case, put char in buffer
+        usart_data->buffer.RX[usart_data->buffer.RX_Head] = c;
+        usart_data->buffer.RX_Head = tempRX_Head;
+    }
 
-	if (c == '\n' && tempRX_Head != usart_data->buffer.RX_Tail) { // newline: flag cli task
-		USART_TXBuffer_PutByte(usart_data, '\r');
-		taskflags |= Task_CLI_bm;
-	}
-	return true;
+    return true;
 }
 
 
