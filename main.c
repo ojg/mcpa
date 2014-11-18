@@ -24,11 +24,16 @@ typedef struct {
 
 void cmd_MasterVol(char *);
 void cmd_MasterVol_help(void);
+void cmd_Debug(char *);
+void cmd_Debug_help(void);
 bool rotary_task(void);
+void cs3318_write(uint8_t, uint8_t);
+
+uint8_t debuglevel = 0;
+#define DEBUG_PRINT(level, format, ...) if (debuglevel >= level) printf(format, ##__VA_ARGS__)
 
 Task_flag_t taskflags = 0;
 const char welcomeMsg[] = "\nWelcome to Octogain!\nType help for list of commands\n";
-
 
 int main(void)
 {
@@ -56,6 +61,7 @@ int main(void)
     register_cli_command("iicr", cmd_iicr, cmd_iicr_help);
     register_cli_command("iicw", cmd_iicw, cmd_iicw_help);
     register_cli_command("vol", cmd_MasterVol, cmd_MasterVol_help);
+    register_cli_command("debug", cmd_Debug, cmd_Debug_help);
 
     /* Set debug LED pin to output */
     LED_PORT.DIRSET = LED_PIN_bm;
@@ -177,9 +183,21 @@ static q13_2 dB_to_q13_2(int msd, int lsd)
 
 static int vol_stepsize = 2;
 
+static void cs3318_stepMasterVol(int direction)
+{
+    if (direction != 0) {
+        uint16_t volreg; //this does not step the quarter-db register
+        volreg = cs3318_read(0x11);
+        volreg += direction * vol_stepsize;
+        if (volreg < 0xfe && volreg >= 0x12)
+            DEBUG_PRINT(1, "Set mastervolume to %d\n", ((int16_t)volreg - 210)>>1);
+            cs3318_write(0x11, volreg);
+    }
+}
+
 void cmd_MasterVol(char * stropt)
 {
-    int numparams, msd, lsd, direction=0;
+    int numparams, msd, lsd=0, direction=0;
     char subcmd[5];
 
     numparams = sscanf(stropt, "%4s %d.%d\n", subcmd, &msd, &lsd);
@@ -196,6 +214,7 @@ void cmd_MasterVol(char * stropt)
         direction = -1;
     }
     else if (!strncmp(subcmd, "set", 3)) {
+        DEBUG_PRINT(1, "Set mastervolume to %d.%d\n", msd, lsd);
         cs3318_setVolReg(0x11, dB_to_q13_2(msd, lsd));
     }
     else if (!strncmp(subcmd, "ch", 2)) {
@@ -212,13 +231,7 @@ void cmd_MasterVol(char * stropt)
         cmd_MasterVol_help();
     }
 
-    if (direction != 0) {
-        uint16_t volreg; //this does not step the quarter-db register
-        volreg = cs3318_read(0x11);
-        volreg += direction * vol_stepsize;
-        if (volreg < 0xfe && volreg >= 0x12)
-            cs3318_write(0x11, volreg);
-    }
+    cs3318_stepMasterVol(direction);
 }
 
 void cmd_MasterVol_help()
@@ -241,16 +254,8 @@ bool rotary_task(void)
     static uint8_t current_rotaryval = 0;
     uint8_t new_rotaryval = ROT_PORT.IN & 3;
     int8_t direction = direction_table[current_rotaryval<<2 | new_rotaryval];
-    if (direction != 0) {
-        uint16_t volreg;
-        volreg = cs3318_read(0x11);
-        volreg += direction * vol_stepsize;
-        if (volreg < 0xfe && volreg >= 0x12)
-            cs3318_write(0x11, volreg);
-
-        //printf("%i, %i, %i\n", direction, current_rotaryval, new_rotaryval);
-        current_rotaryval = new_rotaryval;
-    }
+    cs3318_stepMasterVol(direction);
+    current_rotaryval = new_rotaryval;
     return true;
 }
 
@@ -264,4 +269,27 @@ ISR(PORTD_INT_vect)
         ROT_PORT.INTFLAGS |=  ROT_B_PIN_bm;
         taskflags |= Task_Rotary_bm;
     }
+}
+
+
+#define MAX_DEBUGLEVEL 1
+void cmd_Debug(char * stropt)
+{
+    int numparams, dbglvl;
+
+    numparams = sscanf(stropt, "%d\n", &dbglvl);
+    if (numparams < 1) {
+        printf("Debuglevel = %d\n", debuglevel);
+        return;
+    }
+
+    if (dbglvl > 0 && dbglvl <= MAX_DEBUGLEVEL) {
+        debuglevel = dbglvl;
+    }
+}
+
+void cmd_Debug_help()
+{
+    printf("debug [number]\n");
+    printf("number is >=0 and less than %d\n", MAX_DEBUGLEVEL);
 }
