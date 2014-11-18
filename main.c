@@ -81,6 +81,9 @@ int main(void)
 	/* Enable global interrupts */
 	sei();
 
+    /* Power up cs3318 */
+    cs3318_write(0xe, 0);
+
     /* Ready to run */
 	printf("%s%s", welcomeMsg, CLI_PROMPT);
 
