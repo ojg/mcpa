@@ -95,7 +95,6 @@ int main(void)
 
 	while(1)
 	{
-        LED_PORT.OUTCLR = LED_PIN_bm;
         while (taskflags) { //run as long as any taskflag is set
             i=0;
             while (tasklist[i].taskfunc) { // go through all tasks
@@ -278,6 +277,8 @@ bool rotary_task(void)
 
 ISR(PORTD_INT_vect)
 {
+    LED_PORT.OUTCLR = LED_PIN_bm;
+
     if (ROT_PORT.INTFLAGS & ROT_A_PIN_bm) {
         ROT_PORT.INTFLAGS |=  ROT_A_PIN_bm;
         taskflags |= Task_Rotary_bm;

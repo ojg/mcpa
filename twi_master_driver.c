@@ -67,6 +67,7 @@
  *****************************************************************************/
 
 #include "twi_master_driver.h"
+#include "board.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -465,5 +466,6 @@ void cmd_iicw_help() {
 
 ISR(TWIC_TWIM_vect)
 {
+    LED_PORT.OUTCLR = LED_PIN_bm;
     TWI_MasterInterruptHandler(&twiMaster);
 }
