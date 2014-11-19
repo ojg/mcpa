@@ -15,6 +15,7 @@
 
 #include <avr/io.h>
 #include <avr/sleep.h>
+#include <avr/eeprom.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -22,6 +23,19 @@ typedef struct {
 	bool (*taskfunc)(void);
 	const Task_flag_t bitmask;
 } Tasklist_t;
+
+struct Preferences_t {
+    int8_t vol_stepsize;
+    int8_t vol_mutedB;
+    int8_t vol_startup;
+};
+
+struct Preferences_t preferences;
+struct Preferences_t EEMEM eeprom_preferences = {
+    .vol_stepsize = 2,
+    .vol_mutedB = -60,
+    .vol_startup = -20,
+};
 
 void cmd_MasterVol(char *);
 void cmd_MasterVol_help(void);
@@ -86,6 +100,9 @@ int main(void)
 
 	/* Enable global interrupts */
 	sei();
+    
+    /* Read preferences from EEPROM to SRAM */
+    eeprom_read_block(&preferences, &eeprom_preferences, sizeof(preferences));
 
     /* Init CS3318 */
     CS3318_init();
@@ -117,17 +134,6 @@ extern TWI_Master_t twiMaster;
 
 typedef int16_t q13_2;
 #define CS3318_ADDR 0x40
-struct Preferences_t {
-    int vol_stepsize;
-    int vol_mutedB;
-    int vol_startup;
-};
-
-struct Preferences_t preferences = {
-    .vol_stepsize = 2,
-    .vol_mutedB = -60,
-    .vol_startup = -20,
-};
 
 void cs3318_write(uint8_t addr, uint8_t value)
 {
