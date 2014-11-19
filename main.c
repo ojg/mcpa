@@ -190,9 +190,10 @@ static void cs3318_stepMasterVol(int direction)
         uint16_t volreg; //this does not step the quarter-db register
         volreg = cs3318_read(0x11);
         volreg += direction * vol_stepsize;
-        if (volreg < 0xfe && volreg >= 0x12)
+        if (volreg <= 0xfe && volreg >= 0x12) {
             DEBUG_PRINT(1, "Set mastervolume to %d\n", ((int16_t)volreg - 210)>>1);
             cs3318_write(0x11, volreg);
+        }
     }
 }
 
