@@ -27,7 +27,7 @@ void cmd_MasterVol_help(void);
 void cmd_Debug(char *);
 void cmd_Debug_help(void);
 bool rotary_task(void);
-void cs3318_write(uint8_t, uint8_t);
+void CS3318_init(void);
 
 uint8_t debuglevel = 0;
 #define DEBUG_PRINT(level, format, ...) if (debuglevel >= level) printf(format, ##__VA_ARGS__)
@@ -87,9 +87,9 @@ int main(void)
 	/* Enable global interrupts */
 	sei();
 
-    /* Power up cs3318 */
-    cs3318_write(0xe, 0);
-
+    /* Init CS3318 */
+    CS3318_init();
+    
     /* Ready to run */
 	printf("%s%s", welcomeMsg, CLI_PROMPT);
 
@@ -183,6 +183,7 @@ static q13_2 dB_to_q13_2(int msd, int lsd)
 
 static int vol_stepsize = 2;
 static int vol_mutedB = -60;
+static int vol_startup = -20;
 
 static void cs3318_stepMasterVol(int direction)
 {
@@ -195,6 +196,16 @@ static void cs3318_stepMasterVol(int direction)
             cs3318_write(0x11, volreg);
     }
 }
+
+void CS3318_init(void)
+{
+    /* Set master volume */
+    cs3318_setVolReg(0x11, dB_to_q13_2(vol_startup, 0));
+
+    /* Power up cs3318 */
+    cs3318_write(0xe, 0);
+}
+
 
 void cmd_MasterVol(char * stropt)
 {
