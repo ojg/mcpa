@@ -24,5 +24,6 @@ struct Command_t {
 bool cli_task(void);
 void register_cli_command(char * cmdstr, void (*cmdfunc)(char*), void (*cmdhelp)(void));
 void cmd_help(char*);
+void cmd_help_help(void);
 
 #endif /* CLI_H_ */

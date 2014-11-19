@@ -71,3 +71,8 @@ void cmd_help(char * stropt)
 
     cmdlist[i].cmdhelp(); // run help function for this command
 }
+
+void cmd_help_help(void)
+{
+    cmd_help(NULL);
+}

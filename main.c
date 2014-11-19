@@ -14,6 +14,7 @@
 #include "cli.h"
 
 #include <avr/io.h>
+#include <avr/sleep.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -33,7 +34,6 @@ uint8_t debuglevel = 0;
 #define DEBUG_PRINT(level, format, ...) if (debuglevel >= level) printf(format, ##__VA_ARGS__)
 
 Task_flag_t taskflags = 0;
-const char welcomeMsg[] = "\nWelcome to Octogain!\nType help for list of commands\n";
 
 int main(void)
 {
@@ -54,10 +54,10 @@ int main(void)
 	CLKSYS_Disable( OSC_RC2MEN_bm | OSC_RC32KEN_bm );
 
     /* Initialize sleep mode to idle */
-	SLEEP.CTRL = (SLEEP.CTRL & ~SLEEP_SMODE_gm) | SLEEP_SMODE_IDLE_gc;
+    set_sleep_mode(SLEEP_SMODE_IDLE_gc);
 
     /* Register cli command functions */
-    register_cli_command("help", cmd_help, cmd_help);
+    register_cli_command("help", cmd_help, cmd_help_help);
     register_cli_command("iicr", cmd_iicr, cmd_iicr_help);
     register_cli_command("iicw", cmd_iicw, cmd_iicw_help);
     register_cli_command("vol", cmd_MasterVol, cmd_MasterVol_help);
@@ -91,7 +91,7 @@ int main(void)
     CS3318_init();
     
     /* Ready to run */
-	printf("%s%s", welcomeMsg, CLI_PROMPT);
+	printf("\nWelcome to Octogain!\nType help for list of commands\n%s", CLI_PROMPT);
 
 	while(1)
 	{
@@ -107,15 +107,27 @@ int main(void)
             }
         }
         LED_PORT.OUTSET = LED_PIN_bm;
-        SLEEP.CTRL |= SLEEP_SEN_bm;
-        __asm__ __volatile__ ("sleep");
-        SLEEP.CTRL &= ~SLEEP_SEN_bm;
+        sleep_enable();
+        sleep_cpu();
+        sleep_disable();
     }
 }
 
+extern TWI_Master_t twiMaster;
+
 typedef int16_t q13_2;
 #define CS3318_ADDR 0x40
-extern TWI_Master_t twiMaster;
+struct Preferences_t {
+    int vol_stepsize;
+    int vol_mutedB;
+    int vol_startup;
+};
+
+struct Preferences_t preferences = {
+    .vol_stepsize = 2,
+    .vol_mutedB = -60,
+    .vol_startup = -20,
+};
 
 void cs3318_write(uint8_t addr, uint8_t value)
 {
@@ -180,16 +192,12 @@ static q13_2 dB_to_q13_2(int msd, int lsd)
     return volume_in_db_x4;
 }
 
-static int vol_stepsize = 2;
-static int vol_mutedB = -60;
-static int vol_startup = -20;
-
 static void cs3318_stepMasterVol(int direction)
 {
     if (direction != 0) {
         uint16_t volreg; //this does not step the quarter-db register
         volreg = cs3318_read(0x11);
-        volreg += direction * vol_stepsize;
+        volreg += direction * preferences.vol_stepsize;
         if (volreg <= 0xfe && volreg >= 0x12) {
             DEBUG_PRINT(1, "Set mastervolume to %d\n", ((int16_t)volreg - 210)>>1);
             cs3318_write(0x11, volreg);
@@ -200,7 +208,7 @@ static void cs3318_stepMasterVol(int direction)
 void CS3318_init(void)
 {
     /* Set master volume */
-    cs3318_setVolReg(0x11, dB_to_q13_2(vol_startup, 0));
+    cs3318_setVolReg(0x11, dB_to_q13_2(preferences.vol_startup, 0));
 
     /* Power up cs3318 */
     cs3318_write(0xe, 0);
@@ -226,8 +234,8 @@ void cmd_MasterVol(char * stropt)
         direction = -1;
     }
     else if (!strncmp(subcmd, "mute", 4)) {
-        DEBUG_PRINT(1, "Set mastervolume to %d dB\n", vol_mutedB);
-        cs3318_setVolReg(0x11, dB_to_q13_2(vol_mutedB, 0));        
+        DEBUG_PRINT(1, "Set mastervolume to %d dB\n", preferences.vol_mutedB);
+        cs3318_setVolReg(0x11, dB_to_q13_2(preferences.vol_mutedB, 0));
     }
     else if (!strncmp(subcmd, "set", 3)) {
         DEBUG_PRINT(1, "Set mastervolume to %d.%d\n", msd, lsd);
