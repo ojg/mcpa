@@ -182,6 +182,7 @@ static q13_2 dB_to_q13_2(int msd, int lsd)
 }
 
 static int vol_stepsize = 2;
+static int vol_mutedB = -60;
 
 static void cs3318_stepMasterVol(int direction)
 {
@@ -213,6 +214,10 @@ void cmd_MasterVol(char * stropt)
     else if (!strncmp(subcmd, "down", 4)) {
         direction = -1;
     }
+    else if (!strncmp(subcmd, "mute", 4)) {
+        DEBUG_PRINT(1, "Set mastervolume to %d dB\n", vol_mutedB);
+        cs3318_setVolReg(0x11, dB_to_q13_2(vol_mutedB, 0));        
+    }
     else if (!strncmp(subcmd, "set", 3)) {
         DEBUG_PRINT(1, "Set mastervolume to %d.%d\n", msd, lsd);
         cs3318_setVolReg(0x11, dB_to_q13_2(msd, lsd));
@@ -238,6 +243,7 @@ void cmd_MasterVol_help()
 {
     printf("vol up\n");
     printf("vol down\n");
+    printf("vol mute\n");
     printf("vol set [master value in dB]\n");
     printf("vol ch[channel number] [offset value in dB]\n");
     printf("Example: vol set -23.75\n");
