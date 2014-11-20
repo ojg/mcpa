@@ -435,7 +435,7 @@ void cmd_iicr(char * stropt) {
 }
 
 void cmd_iicr_help() {
-    printf("iicr [chip address] [register address] [number of bytes]\n");
+    printf_P(PSTR("iicr [chip address] [register address] [number of bytes]\n"));
 }
 
 
@@ -460,7 +460,7 @@ void cmd_iicw(char * stropt) {
 }
 
 void cmd_iicw_help() {
-    printf("iicw [chip address] [register address] [value]\n");
+    printf_P(PSTR("iicw [chip address] [register address] [value]\n"));
 }
 
 

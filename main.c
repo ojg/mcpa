@@ -113,7 +113,7 @@ int main(void)
     CS3318_init();
     
     /* Ready to run */
-	printf("\nWelcome to Octogain!\nType help for list of commands\n%s", CLI_PROMPT);
+	printf_P(PSTR("\nWelcome to Octogain!\nType help for list of commands\n%s"), CLI_PROMPT);
 
 	while(1)
 	{
@@ -270,13 +270,14 @@ void cmd_MasterVol(char * stropt)
 
 void cmd_MasterVol_help()
 {
-    printf("vol up\n");
-    printf("vol down\n");
-    printf("vol mute\n");
-    printf("vol set [master value in dB]\n");
-    printf("vol ch[channel number] [offset value in dB]\n");
-    printf("Example: vol set -23.75\n");
-    printf("Example: vol ch3 -2.5\n");
+    printf_P(PSTR( \
+    "vol up\n" \
+    "vol down\n" \
+    "vol mute\n" \
+    "vol set [master value in dB]\n" \
+    "vol ch[channel number] [offset value in dB]\n" \
+    "Example: vol set -23.75\n" \
+    "Example: vol ch3 -2.5\n"));
 }
 
 
@@ -327,8 +328,9 @@ void cmd_Debug(char * stropt)
 
 void cmd_Debug_help()
 {
-    printf("debug [number]\n");
-    printf("number is >=0 and less than %d\n", MAX_DEBUGLEVEL);
+    printf_P(PSTR( \
+    "debug [number]\n" \
+    "number is >=0 and less than %d\n"), MAX_DEBUGLEVEL);
 }
 
 
@@ -376,7 +378,7 @@ void cmd_Prefs(char * stropt)
 
 void cmd_Prefs_help(void)
 {
-    printf(( \
+    printf_P(PSTR( \
     "prefs mute [value in dB]\n" \
     "prefs startup [value in dB]\n" \
     "prefs stepsize [value in 1/4 dB resolution]\n" \
