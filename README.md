@@ -13,12 +13,12 @@ To-do list
 - Potmeter
 - LED 4-digit
 - Char LCD 2x8
-- UART commands - edit preferences
-- Preferences - volume stepsize
-- Preferences - startup volume
+- [x] UART commands - edit preferences
+- [x] Preferences - volume stepsize
+- [x] Preferences - startup volume
 - Preferences - max volume
 - Preferences - min volume
-- Preferences - mute volume
+- [x] Preferences - mute volume
 - Preferences - RC5 codes
 - RC5 - volume up/down
 - RC5 - learning mode

@@ -19,20 +19,22 @@
 #include <stdio.h>
 #include <string.h>
 
+typedef int16_t q13_2;
+
 typedef struct {
 	bool (*taskfunc)(void);
 	const Task_flag_t bitmask;
 } Tasklist_t;
 
 struct Preferences_t {
-    int8_t vol_stepsize;
+    q13_2 vol_stepsize;
     int8_t vol_mutedB;
     int8_t vol_startup;
 };
 
 struct Preferences_t preferences;
 struct Preferences_t EEMEM eeprom_preferences = {
-    .vol_stepsize = 2,
+    .vol_stepsize = 2 << 2,
     .vol_mutedB = -60,
     .vol_startup = -20,
 };
@@ -41,6 +43,8 @@ void cmd_MasterVol(char *);
 void cmd_MasterVol_help(void);
 void cmd_Debug(char *);
 void cmd_Debug_help(void);
+void cmd_Prefs(char *);
+void cmd_Prefs_help(void);
 bool rotary_task(void);
 void CS3318_init(void);
 
@@ -75,6 +79,7 @@ int main(void)
     register_cli_command("iicr", cmd_iicr, cmd_iicr_help);
     register_cli_command("iicw", cmd_iicw, cmd_iicw_help);
     register_cli_command("vol", cmd_MasterVol, cmd_MasterVol_help);
+    register_cli_command("prefs", cmd_Prefs, cmd_Prefs_help);
     register_cli_command("debug", cmd_Debug, cmd_Debug_help);
 
     /* Set debug LED pin to output */
@@ -132,7 +137,6 @@ int main(void)
 
 extern TWI_Master_t twiMaster;
 
-typedef int16_t q13_2;
 #define CS3318_ADDR 0x40
 
 void cs3318_write(uint8_t addr, uint8_t value)
@@ -201,11 +205,11 @@ static q13_2 dB_to_q13_2(int msd, int lsd)
 static void cs3318_stepMasterVol(int direction)
 {
     if (direction != 0) {
-        uint16_t volreg; //this does not step the quarter-db register
+        uint16_t volreg; //todo: this does not step the quarter-db register
         volreg = cs3318_read(0x11);
-        volreg += direction * preferences.vol_stepsize;
+        volreg += direction * preferences.vol_stepsize >> 1;
         if (volreg <= 0xfe && volreg >= 0x12) {
-            DEBUG_PRINT(1, "Set mastervolume to %d\n", ((int16_t)volreg - 210)>>1);
+            DEBUG_PRINT(1, "Set mastervolume to %d.%02d\n", ((int16_t)volreg - 210)>>1, (volreg & 1) * 50);
             cs3318_write(0x11, volreg);
         }
     }
@@ -244,7 +248,7 @@ void cmd_MasterVol(char * stropt)
         cs3318_setVolReg(0x11, dB_to_q13_2(preferences.vol_mutedB, 0));
     }
     else if (!strncmp(subcmd, "set", 3)) {
-        DEBUG_PRINT(1, "Set mastervolume to %d.%d\n", msd, lsd);
+        DEBUG_PRINT(1, "Set mastervolume to %d.%02d\n", msd, lsd);
         cs3318_setVolReg(0x11, dB_to_q13_2(msd, lsd));
     }
     else if (!strncmp(subcmd, "ch", 2)) {
@@ -325,4 +329,56 @@ void cmd_Debug_help()
 {
     printf("debug [number]\n");
     printf("number is >=0 and less than %d\n", MAX_DEBUGLEVEL);
+}
+
+
+void cmd_Prefs(char * stropt)
+{
+    int numparams, msd, lsd;
+    char subcmd[16];
+
+    numparams = sscanf(stropt, "%15s %d.%d\n", subcmd, &msd, &lsd);
+    if (numparams > 3) {
+        printf("Unknown options\n");
+        cmd_Prefs_help();
+        return;
+    }
+    else if (numparams < 1) {
+        printf("Preferences:\n");
+        printf(" stepsize: %d.%02d dB\n", preferences.vol_stepsize>>2, (preferences.vol_stepsize & 3) * 25);
+        printf(" mute: %d dB\n", preferences.vol_mutedB);
+        printf(" startup master: %d dB\n", preferences.vol_startup);
+        return;
+    }
+    else if (!strncmp(subcmd, "save", 4)) {
+        eeprom_update_block(&preferences, &eeprom_preferences, sizeof(preferences));
+    }
+    else if (!strncmp(subcmd, "mute", 4)) {
+        if (msd <= 0 && msd >= -96) {
+            preferences.vol_mutedB = msd;
+        }
+    }
+    else if (!strncmp(subcmd, "startup", 7)) {
+        if (msd <= 22 && msd >= -96) {
+            preferences.vol_startup = msd;
+        }
+    }
+    else if (!strncmp(subcmd, "stepsize", 8)) {
+        if (msd <= 22 && msd >= -96) {
+            preferences.vol_stepsize = dB_to_q13_2(msd, lsd);
+        }
+    }
+    else {
+        printf("Unknown sub-command\n");
+        cmd_Prefs_help();
+    }
+}
+
+void cmd_Prefs_help(void)
+{
+    printf(( \
+    "prefs mute [value in dB]\n" \
+    "prefs startup [value in dB]\n" \
+    "prefs stepsize [value in 1/4 dB resolution]\n" \
+    "example: prefs stepsize 2.5\n"));
 }
