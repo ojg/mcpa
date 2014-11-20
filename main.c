@@ -366,7 +366,7 @@ void cmd_Prefs(char * stropt)
         }
     }
     else if (!strncmp(subcmd, "stepsize", 8)) {
-        if (msd <= 22 && msd >= -96) {
+        if (msd <= 20 && msd >= 0.25) {
             preferences.vol_stepsize = dB_to_q13_2(msd, lsd);
         }
     }
