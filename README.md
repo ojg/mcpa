@@ -16,9 +16,10 @@ To-do list
 - [x] UART commands - edit preferences
 - [x] Preferences - volume stepsize
 - [x] Preferences - startup volume
-- Preferences - max volume
-- Preferences - min volume
+- [x] Preferences - max volume
+- [x] Preferences - min volume
 - [x] Preferences - mute volume
+- Preferences - channel powerdown
 - Preferences - RC5 codes
 - RC5 - volume up/down
 - RC5 - learning mode

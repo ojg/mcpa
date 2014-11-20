@@ -30,6 +30,8 @@ struct Preferences_t {
     q13_2 vol_stepsize;
     int8_t vol_mutedB;
     int8_t vol_startup;
+    int8_t vol_min;
+    int8_t vol_max;
 };
 
 struct Preferences_t preferences;
@@ -37,6 +39,8 @@ struct Preferences_t EEMEM eeprom_preferences = {
     .vol_stepsize = 2 << 2,
     .vol_mutedB = -60,
     .vol_startup = -20,
+    .vol_min = -96,
+    .vol_max = 22,
 };
 
 void cmd_MasterVol(char *);
@@ -168,10 +172,10 @@ void cs3318_setVolReg(uint8_t regaddr, q13_2 volume_in_db_x4)
     uint8_t regval = (volume_in_db_x4 >> 1) + 210;
     uint8_t quarterdb_val = volume_in_db_x4 & 1;
     cs3318_write(regaddr, regval);
-    if (regaddr == 0x11 || regaddr == 0x14 || regaddr == 0x17) {
+    if (regaddr == 0x11 || regaddr == 0x14 || regaddr == 0x17) { //if master volume registers, set bit in ctrl register
         cs3318_write(regaddr+1, (cs3318_read(regaddr+1) & 0xFE) | quarterdb_val);
     }        
-    else {
+    else { //if channel offset registers, set corresponding bit in quaarter db register
         regaddr--;
         cs3318_write(0x09, (cs3318_read(0x09) & ~(1 << regaddr)) | (quarterdb_val << regaddr));
     }
@@ -195,9 +199,9 @@ static q13_2 dB_to_q13_2(int msd, int lsd)
         volume_in_db_x4 += sign * 1;
     }
 
-    if (volume_in_db_x4 > (22 * 4) || volume_in_db_x4 < (-96 * 4)) {
-        printf("Value outside range 22 to -96dB\n");
-        volume_in_db_x4 = -96 * 4;
+    if (volume_in_db_x4 > (preferences.vol_max * 4) || volume_in_db_x4 < (preferences.vol_min * 4)) {
+        printf("Value outside range %d to %ddB\n", preferences.vol_max, preferences.vol_min);
+        volume_in_db_x4 = preferences.vol_min * 4;
     }
     return volume_in_db_x4;
 }
@@ -205,10 +209,10 @@ static q13_2 dB_to_q13_2(int msd, int lsd)
 static void cs3318_stepMasterVol(int direction)
 {
     if (direction != 0) {
-        uint16_t volreg; //todo: this does not step the quarter-db register
+        int16_t volreg; //todo: this does not step the quarter-db register
         volreg = cs3318_read(0x11);
         volreg += direction * preferences.vol_stepsize >> 1;
-        if (volreg <= 0xfe && volreg >= 0x12) {
+        if (volreg <= ((int16_t)preferences.vol_max * 2 + 210) && volreg >= ((int16_t)preferences.vol_min * 2 + 210)) {
             DEBUG_PRINT(1, "Set mastervolume to %d.%02d\n", ((int16_t)volreg - 210)>>1, (volreg & 1) * 50);
             cs3318_write(0x11, volreg);
         }
@@ -350,18 +354,30 @@ void cmd_Prefs(char * stropt)
         printf(" stepsize: %d.%02d dB\n", preferences.vol_stepsize>>2, (preferences.vol_stepsize & 3) * 25);
         printf(" mute: %d dB\n", preferences.vol_mutedB);
         printf(" startup master: %d dB\n", preferences.vol_startup);
+        printf(" max limit: %d dB\n", preferences.vol_max);
+        printf(" min limit: %d dB\n", preferences.vol_min);
         return;
     }
     else if (!strncmp(subcmd, "save", 4)) {
         eeprom_update_block(&preferences, &eeprom_preferences, sizeof(preferences));
     }
+    else if (!strncmp(subcmd, "max", 3)) {
+        if (msd <= 22 && msd >= preferences.vol_min) {
+            preferences.vol_max = msd;
+        }
+    }
+    else if (!strncmp(subcmd, "min", 3)) {
+        if (msd <= preferences.vol_max && msd >= -96) {
+            preferences.vol_min = msd;
+        }
+    }
     else if (!strncmp(subcmd, "mute", 4)) {
-        if (msd <= 0 && msd >= -96) {
+        if (msd <= 0 && msd >= preferences.vol_min) {
             preferences.vol_mutedB = msd;
         }
     }
     else if (!strncmp(subcmd, "startup", 7)) {
-        if (msd <= 22 && msd >= -96) {
+        if (msd <= preferences.vol_max && msd >= preferences.vol_min) {
             preferences.vol_startup = msd;
         }
     }
@@ -379,6 +395,9 @@ void cmd_Prefs(char * stropt)
 void cmd_Prefs_help(void)
 {
     printf_P(PSTR( \
+    "prefs save <- write values to eeprom"
+    "prefs max [value in dB]\n" \
+    "prefs min [value in dB]\n" \
     "prefs mute [value in dB]\n" \
     "prefs startup [value in dB]\n" \
     "prefs stepsize [value in 1/4 dB resolution]\n" \
