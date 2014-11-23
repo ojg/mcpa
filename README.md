@@ -10,20 +10,22 @@ To-do list
 - [x] TWI CS3318 read/write
 - [x] UART commands - volume set/up/down/mute
 - [x] Rotary encoder
-- Potmeter
-- LED 4-digit
-- Char LCD 2x8
 - [x] UART commands - edit preferences
 - [x] Preferences - volume stepsize
 - [x] Preferences - startup volume
 - [x] Preferences - max volume
 - [x] Preferences - min volume
-- [x] Preferences - mute volume
+- [x] Preferences - mute
+- UART bootloader
+- CLI command history
+- Preferences - channel offsets
 - Preferences - channel powerdown
 - Preferences - RC5 codes
 - RC5 - volume up/down
 - RC5 - learning mode
-- UART bootloader
+- Potmeter
+- LED 4-digit
+- LCD
 - MIDI control
 - Balance left/right
 - Auto-detect potmeter/rotary
