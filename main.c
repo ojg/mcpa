@@ -37,7 +37,6 @@ struct Preferences_t {
 struct Preferences_t preferences;
 struct Preferences_t EEMEM eeprom_preferences = {
     .vol_stepsize = 2 << 2,
-    .vol_mutedB = -60,
     .vol_startup = -20,
     .vol_min = -96,
     .vol_max = 22,
@@ -50,7 +49,7 @@ void cmd_Debug_help(void);
 void cmd_Prefs(char *);
 void cmd_Prefs_help(void);
 bool rotary_task(void);
-void CS3318_init(void);
+void cs3318_init(void);
 
 uint8_t debuglevel = 0;
 #define DEBUG_PRINT(level, format, ...) if (debuglevel >= level) printf(format, ##__VA_ARGS__)
@@ -114,10 +113,11 @@ int main(void)
     eeprom_read_block(&preferences, &eeprom_preferences, sizeof(preferences));
 
     /* Init CS3318 */
-    CS3318_init();
+    cs3318_init();
     
     /* Ready to run */
-	printf_P(PSTR("\nWelcome to Octogain!\nType help for list of commands\n%s"), CLI_PROMPT);
+	printf_P(PSTR("\nWelcome to Octogain!\nReset status %d\nType help for list of commands\n%s"), RST.STATUS, CLI_PROMPT);
+    RST.STATUS |= 0x3F;
 
 	while(1)
 	{
@@ -143,7 +143,7 @@ extern TWI_Master_t twiMaster;
 
 #define CS3318_ADDR 0x40
 
-void cs3318_write(uint8_t addr, uint8_t value)
+static void cs3318_write(uint8_t addr, uint8_t value)
 {
     uint8_t data[2] = {addr, value};
     TWI_MasterWrite(&twiMaster, CS3318_ADDR, data, 2);
@@ -154,7 +154,7 @@ void cs3318_write(uint8_t addr, uint8_t value)
 
 }
 
-uint8_t cs3318_read(uint8_t addr)
+static uint8_t cs3318_read(uint8_t addr)
 {
     TWI_MasterWriteRead(&twiMaster, CS3318_ADDR, &addr, 1, 1);
 
@@ -167,7 +167,7 @@ uint8_t cs3318_read(uint8_t addr)
 }
 
 
-void cs3318_setVolReg(uint8_t regaddr, q13_2 volume_in_db_x4) 
+static void cs3318_setVolReg(uint8_t regaddr, q13_2 volume_in_db_x4) 
 {
     uint8_t regval = (volume_in_db_x4 >> 1) + 210;
     uint8_t quarterdb_val = volume_in_db_x4 & 1;
@@ -178,6 +178,29 @@ void cs3318_setVolReg(uint8_t regaddr, q13_2 volume_in_db_x4)
     else { //if channel offset registers, set corresponding bit in quaarter db register
         regaddr--;
         cs3318_write(0x09, (cs3318_read(0x09) & ~(1 << regaddr)) | (quarterdb_val << regaddr));
+    }
+}
+
+static void cs3318_mute(uint8_t channel, bool mute)
+{
+    if (channel == 0) { //master
+        DEBUG_PRINT(1, "%s master\n", mute ? "mute" : "unmute");
+        if (mute) {
+            cs3318_write(0x12, cs3318_read(0x12) | 0x2);
+        } else {
+            cs3318_write(0x12, cs3318_read(0x12) & ~0x2);
+        }
+    }
+    else if (channel < 8) {
+        DEBUG_PRINT(1, "%s channel %d\n", mute ? "mute" : "unmute", channel);
+        if (mute) {
+            cs3318_write(0x0a, cs3318_read(0x0a) | 1 << (channel-1));
+        } else {
+            cs3318_write(0x0a, cs3318_read(0x0a) & ~(1 << (channel-1)));
+        }
+    }
+    else {
+        printf_P(PSTR("Wrong channel number\n"));
     }
 }
 
@@ -219,7 +242,7 @@ static void cs3318_stepMasterVol(int direction)
     }
 }
 
-void CS3318_init(void)
+void cs3318_init(void)
 {
     /* Set master volume */
     cs3318_setVolReg(0x11, dB_to_q13_2(preferences.vol_startup, 0));
@@ -232,9 +255,9 @@ void CS3318_init(void)
 void cmd_MasterVol(char * stropt)
 {
     int numparams, msd, lsd=0, direction=0;
-    char subcmd[5];
+    char subcmd[10];
 
-    numparams = sscanf(stropt, "%4s %d.%d\n", subcmd, &msd, &lsd);
+    numparams = sscanf(stropt, "%9s %d.%d\n", subcmd, &msd, &lsd);
     if (numparams < 1 || numparams > 3) {
         printf("Unknown options\n");
         cmd_MasterVol_help();
@@ -248,8 +271,12 @@ void cmd_MasterVol(char * stropt)
         direction = -1;
     }
     else if (!strncmp(subcmd, "mute", 4)) {
-        DEBUG_PRINT(1, "Set mastervolume to %d dB\n", preferences.vol_mutedB);
-        cs3318_setVolReg(0x11, dB_to_q13_2(preferences.vol_mutedB, 0));
+        if (numparams == 1) msd = 0;
+        cs3318_mute(msd, true);
+    }
+    else if (!strncmp(subcmd, "unmute", 6)) {
+        if (numparams == 1) msd = 0;
+        cs3318_mute(msd, false);
     }
     else if (!strncmp(subcmd, "set", 3)) {
         DEBUG_PRINT(1, "Set mastervolume to %d.%02d\n", msd, lsd);
@@ -277,7 +304,8 @@ void cmd_MasterVol_help()
     printf_P(PSTR( \
     "vol up\n" \
     "vol down\n" \
-    "vol mute\n" \
+    "vol mute [channel]\n" \
+    "vol unmute [channel]\n" \
     "vol set [master value in dB]\n" \
     "vol ch[channel number] [offset value in dB]\n" \
     "Example: vol set -23.75\n" \
@@ -371,11 +399,6 @@ void cmd_Prefs(char * stropt)
             preferences.vol_min = msd;
         }
     }
-    else if (!strncmp(subcmd, "mute", 4)) {
-        if (msd <= 0 && msd >= preferences.vol_min) {
-            preferences.vol_mutedB = msd;
-        }
-    }
     else if (!strncmp(subcmd, "startup", 7)) {
         if (msd <= preferences.vol_max && msd >= preferences.vol_min) {
             preferences.vol_startup = msd;
@@ -398,7 +421,6 @@ void cmd_Prefs_help(void)
     "prefs save <- write values to eeprom"
     "prefs max [value in dB]\n" \
     "prefs min [value in dB]\n" \
-    "prefs mute [value in dB]\n" \
     "prefs startup [value in dB]\n" \
     "prefs stepsize [value in 1/4 dB resolution]\n" \
     "example: prefs stepsize 2.5\n"));
