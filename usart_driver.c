@@ -129,7 +129,7 @@ static void USART_InterruptDriver_DreInterruptLevel_Set(USART_data_t * usart_dat
  *  \retval true      There is data in the receive buffer.
  *  \retval false     The receive buffer is empty.
  */
-static bool USART_TXBuffer_FreeSpace(USART_data_t * usart_data)
+static inline bool USART_TXBuffer_FreeSpace(USART_data_t * usart_data)
 {
 	/* Make copies to make sure that volatile access is specified. */
 	uint8_t tempHead = (usart_data->buffer.TX_Head + 1) & USART_TX_BUFFER_MASK;
@@ -151,7 +151,7 @@ static bool USART_TXBuffer_FreeSpace(USART_data_t * usart_data)
  */
 static bool USART_TXBuffer_PutByte(USART_data_t * usart_data, uint8_t data)
 {
-	uint8_t tempCTRLA;
+    uint8_t tempCTRLA;
 	uint8_t tempTX_Head;
 	USART_Buffer_t * TXbufPtr = &usart_data->buffer;
 
@@ -250,24 +250,24 @@ static inline bool USART_RXComplete(USART_data_t * usart_data)
 	else if (tempRX_Head == usart_data->buffer.RX_Tail) { // full buffer
 		USART_TXBuffer_PutByte(usart_data, '\a');
 	}
+    else if (c >= 32 && c < 127 ) { // check for normal char
+        USART_TXBuffer_PutByte(usart_data, c); // put char in buffer
+        usart_data->buffer.RX[usart_data->buffer.RX_Head] = c;
+        usart_data->buffer.RX_Head = tempRX_Head;
+    }
 	else if (c == '\n') {
-        if (usart_data->buffer.RX_Head == usart_data->buffer.RX_Tail) {
+        if (usart_data->buffer.RX_Head == usart_data->buffer.RX_Tail) { //newline and empty buffer, just print new prompt
             USART_TXBuffer_PutByte(usart_data, c);
             USART_TXBuffer_PutByte(usart_data, '\r');
             USART_TXBuffer_PutByte(usart_data, '>');
         }
-        else if (tempRX_Head != usart_data->buffer.RX_Tail) { // newline: flag cli task
+        else if (tempRX_Head != usart_data->buffer.RX_Tail) { // newline and non-empty buffer: flag cli task
             USART_TXBuffer_PutByte(usart_data, c); 
             USART_TXBuffer_PutByte(usart_data, '\r');
             usart_data->buffer.RX[usart_data->buffer.RX_Head] = c; // put newline in buffer
             usart_data->buffer.RX_Head = tempRX_Head;
             taskflags |= Task_CLI_bm;
         }
-    }
-    else {
-        USART_TXBuffer_PutByte(usart_data, c); // normal case, put char in buffer
-        usart_data->buffer.RX[usart_data->buffer.RX_Head] = c;
-        usart_data->buffer.RX_Head = tempRX_Head;
     }
 
     return true;
@@ -388,7 +388,8 @@ void USART_init(USART_t * usart)
 	USART_RxdInterruptLevel_Set(USART_data.usart, USART_RXCINTLVL_LO_gc);
 	
 	// Set Baudrate to 115200 bps: (((F_CPU/baudrate) - 1) / 16)
-	USART_Baudrate_Set(usart, 17 , 0);
+	USART_Baudrate_Set(usart, 131 , -3); // 115200
+    //USART_Baudrate_Set(usart, 12 , 2); // 38400
 
 	/* Enable both RX and TX. */
 	USART_Rx_Enable(USART_data.usart);
