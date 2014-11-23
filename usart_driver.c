@@ -69,6 +69,9 @@
 #include "board.h"
 #include <stdio.h>
 
+extern uint8_t debuglevel;
+#define DEBUG_PRINT(level, format, ...) if (debuglevel >= level) printf(format, ##__VA_ARGS__)
+
 static int uart_getchar(FILE *stream);
 static int uart_putchar(char c, FILE *stream);
 
@@ -269,6 +272,8 @@ static inline bool USART_RXComplete(USART_data_t * usart_data)
             taskflags |= Task_CLI_bm;
         }
     }
+
+    DEBUG_PRINT(2, "\nRX_head: %d RX: _%s_ RX_tail: %d\n", usart_data->buffer.RX_Head, usart_data->buffer.RX, usart_data->buffer.RX_Tail);
 
     return true;
 }

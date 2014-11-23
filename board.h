@@ -6,8 +6,8 @@
  */ 
 
 
-#ifndef INCFILE1_H_
-#define INCFILE1_H_
+#ifndef BOARD_H_
+#define BOARD_H_
 
 #include <inttypes.h>
 
