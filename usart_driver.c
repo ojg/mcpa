@@ -222,7 +222,17 @@ static inline uint8_t USART_RXBuffer_GetByte(USART_data_t * usart_data)
 	return ans;
 }
 
+uint8_t heads[8];
+uint8_t tails[8];
+uint8_t histi = 0;
 
+void dump_hist(void)
+{
+    for (uint8_t i=0; i<8; i++) {
+        printf("histi=%d, heads=%d, tails=%d\n", i, heads[i], tails[i]);
+    }
+    printf("%s\n", USART_data.buffer.RX);
+}
 
 /*! \brief RX Complete Interrupt Service Routine.
  *
@@ -269,11 +279,27 @@ static inline bool USART_RXComplete(USART_data_t * usart_data)
             USART_TXBuffer_PutByte(usart_data, '\r');
             usart_data->buffer.RX[usart_data->buffer.RX_Head] = c; // put newline in buffer
             usart_data->buffer.RX_Head = tempRX_Head;
+
+            /* save history */
+            heads[histi] = (usart_data->buffer.RX_Head - 1) & USART_RX_BUFFER_MASK;
+            tails[histi] = usart_data->buffer.RX_Tail;
+            histi = (histi + 1) & 7;
+
             taskflags |= Task_CLI_bm;
         }
     }
+    else if (c == 9) { // TAB for previous command
+        histi = (histi - 1) & 0x7;
+        usart_data->buffer.RX_Head = heads[histi];
+        usart_data->buffer.RX_Tail = tails[histi];
+        USART_TXBuffer_PutByte(usart_data, '\r');
+        USART_TXBuffer_PutByte(usart_data, '>');
+        for (uint8_t i=tails[histi]; i<heads[histi]; i++) {
+            USART_TXBuffer_PutByte(usart_data, usart_data->buffer.RX[i]); 
+        }
+    }
 
-    DEBUG_PRINT(2, "\nRX_head: %d RX: _%s_ RX_tail: %d\n", usart_data->buffer.RX_Head, usart_data->buffer.RX, usart_data->buffer.RX_Tail);
+    DEBUG_PRINT(3, "\nRX_head: %d RX: _%s_ RX_tail: %d\n", usart_data->buffer.RX_Head, usart_data->buffer.RX, usart_data->buffer.RX_Tail);
 
     return true;
 }

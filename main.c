@@ -342,7 +342,7 @@ ISR(PORTD_INT_vect)
 }
 
 
-#define MAX_DEBUGLEVEL 1
+#define MAX_DEBUGLEVEL 3
 void cmd_Debug(char * stropt)
 {
     int numparams, dbglvl;
