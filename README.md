@@ -16,8 +16,8 @@ To-do list
 - [x] Preferences - max volume
 - [x] Preferences - min volume
 - [x] Preferences - mute
-- UART bootloader
-- CLI command history
+- [x] UART bootloader
+- [x] CLI command history
 - Preferences - channel offsets
 - Preferences - channel powerdown
 - Preferences - RC5 codes
@@ -29,3 +29,4 @@ To-do list
 - MIDI control
 - Balance left/right
 - Auto-detect potmeter/rotary
+- 16+ channel expansion
