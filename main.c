@@ -36,7 +36,7 @@ struct Preferences_t {
 
 struct Preferences_t preferences;
 struct Preferences_t EEMEM eeprom_preferences = {
-    .vol_stepsize = 2 << 2,
+    .vol_stepsize = 2 << 2, // in quarter-dB
     .vol_startup = -20,
     .vol_min = -96,
     .vol_max = 22,
@@ -166,6 +166,22 @@ static uint8_t cs3318_read(uint8_t addr)
     return twiMaster.readData[0];
 }
 
+static q13_2 cs3318_getVolReg(uint8_t regaddr) 
+{
+    q13_2 volume_in_db_x4;
+    uint8_t regval;
+    uint8_t quarterdb_val;
+    regval = cs3318_read(regaddr);
+    if (regaddr == 0x11 || regaddr == 0x14 || regaddr == 0x17) { //if master volume registers, get bit in ctrl register
+        quarterdb_val = cs3318_read(regaddr+1) & 0x01;
+    }
+    else { //if channel offset registers, get corresponding bit in quaarter db register
+        regaddr--;
+        quarterdb_val = cs3318_read(0x09) & (1 << regaddr);
+    }
+    volume_in_db_x4 = (((q13_2)regval - 210) << 1) | quarterdb_val;
+    return volume_in_db_x4;
+}
 
 static void cs3318_setVolReg(uint8_t regaddr, q13_2 volume_in_db_x4) 
 {
@@ -232,12 +248,11 @@ static q13_2 dB_to_q13_2(int msd, int lsd)
 static void cs3318_stepMasterVol(int direction)
 {
     if (direction != 0) {
-        int16_t volreg; //todo: this does not step the quarter-db register
-        volreg = cs3318_read(0x11);
-        volreg += direction * preferences.vol_stepsize >> 1;
-        if (volreg <= ((int16_t)preferences.vol_max * 2 + 210) && volreg >= ((int16_t)preferences.vol_min * 2 + 210)) {
-            DEBUG_PRINT(1, "Set mastervolume to %d.%02d\n", ((int16_t)volreg - 210)>>1, (volreg & 1) * 50);
-            cs3318_write(0x11, volreg);
+        q13_2 volume_in_db_x4 = cs3318_getVolReg(0x11);
+        volume_in_db_x4 += direction * preferences.vol_stepsize;
+        if (volume_in_db_x4 <= preferences.vol_max << 2 && volume_in_db_x4 >= preferences.vol_min << 2) {
+            DEBUG_PRINT(1, "Set mastervolume to %d: %.2f\n", volume_in_db_x4, (float)volume_in_db_x4 / 4.0f);
+            cs3318_setVolReg(0x11, volume_in_db_x4);
         }
     }
 }
@@ -258,13 +273,17 @@ void cmd_MasterVol(char * stropt)
     char subcmd[10];
 
     numparams = sscanf(stropt, "%9s %d.%d\n", subcmd, &msd, &lsd);
-    if (numparams < 1 || numparams > 3) {
+    if (numparams > 3) {
         printf("Unknown options\n");
         cmd_MasterVol_help();
         return;
     }
     
-    if (!strncmp(subcmd, "up", 2)) {
+    if (numparams < 1) {
+        q13_2 volume_in_db_x4 = cs3318_getVolReg(0x11);
+        printf("Master volume: %.2f dB\n", (float)volume_in_db_x4 / 4.0f);
+    }
+    else if (!strncmp(subcmd, "up", 2)) {
         direction = 1;
     }
     else if (!strncmp(subcmd, "down", 4)) {
@@ -353,7 +372,7 @@ void cmd_Debug(char * stropt)
         return;
     }
 
-    if (dbglvl > 0 && dbglvl <= MAX_DEBUGLEVEL) {
+    if (dbglvl >= 0 && dbglvl <= MAX_DEBUGLEVEL) {
         debuglevel = dbglvl;
     }
 }
@@ -405,7 +424,7 @@ void cmd_Prefs(char * stropt)
         }
     }
     else if (!strncmp(subcmd, "stepsize", 8)) {
-        if (msd <= 20 && msd >= 0.25) {
+        if (msd <= 20 && (msd > 0 || lsd > 0)) {
             preferences.vol_stepsize = dB_to_q13_2(msd, lsd);
         }
     }
