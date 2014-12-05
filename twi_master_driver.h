@@ -105,7 +105,7 @@ typedef struct TWI_Master {
 }TWI_Master_t;
 
 
-
+TWI_Master_t * get_TWI_master(void);
 void TWI_MasterInit(TWI_t *module,
                     TWI_MASTER_INTLVL_t intLevel,
                     uint8_t baudRateRegisterSetting);

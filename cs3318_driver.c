@@ -12,7 +12,6 @@
 
 #include <stdio.h>
 
-extern TWI_Master_t twiMaster;
 extern uint8_t debuglevel;
 
 #define MAX_SLAVES 4
@@ -21,30 +20,32 @@ uint8_t cs3318_addr[MAX_SLAVES] = {0x40, 0, 0, 0};
 static void cs3318_write(uint8_t chip, uint8_t addr, uint8_t value)
 {
     uint8_t data[2] = {addr, value};
-    TWI_MasterWrite(&twiMaster, cs3318_addr[chip], data, 2);
+    TWI_Master_t * twiMaster = get_TWI_master();
+    TWI_MasterWrite(twiMaster, cs3318_addr[chip], data, 2);
 
-    while (twiMaster.status != TWIM_STATUS_READY) {
+    while (twiMaster->status != TWIM_STATUS_READY) {
         /* Wait until transaction is complete. */
     }
-    if (twiMaster.result == TWIM_RESULT_NACK_RECEIVED) {
+    if (twiMaster->result == TWIM_RESULT_NACK_RECEIVED) {
         printf("Error: I2C NAK received\n");
     }
 }
 
 static uint8_t cs3318_read(uint8_t chip, uint8_t addr)
 {
-    TWI_MasterWriteRead(&twiMaster, cs3318_addr[chip], &addr, 1, 1);
+    TWI_Master_t * twiMaster = get_TWI_master();
+    TWI_MasterWriteRead(twiMaster, cs3318_addr[chip], &addr, 1, 1);
 
-    while (twiMaster.status != TWIM_STATUS_READY) {
+    while (twiMaster->status != TWIM_STATUS_READY) {
         /* Wait until transaction is complete. */
     }
-    if (twiMaster.result == TWIM_RESULT_NACK_RECEIVED) {
+    if (twiMaster->result == TWIM_RESULT_NACK_RECEIVED) {
         printf("Error: I2C NAK received\n");
         return 0;
     }
 
-    DEBUG_PRINT(2, "0x%02X\n", twiMaster.readData[0]);
-    return twiMaster.readData[0];
+    DEBUG_PRINT(2, "0x%02X\n", twiMaster->readData[0]);
+    return twiMaster->readData[0];
 }
 
 q13_2 cs3318_getVolReg(uint8_t chip, uint8_t regaddr)

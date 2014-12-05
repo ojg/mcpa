@@ -74,6 +74,11 @@
 
 TWI_Master_t twiMaster;    /*!< TWI master module. */
 
+TWI_Master_t * get_TWI_master()
+{
+    return &twiMaster;
+}
+
 /*! \brief Initialize the TWI module.
  *
  *  TWI module initialization function.
