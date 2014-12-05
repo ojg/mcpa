@@ -13,7 +13,6 @@
 #include <stdio.h>
 
 extern TWI_Master_t twiMaster;
-extern struct Preferences_t preferences;
 extern uint8_t debuglevel;
 
 #define MAX_SLAVES 4
@@ -107,11 +106,12 @@ void cs3318_mute(uint8_t channel, bool mute)
 void cs3318_stepMasterVol(int direction)
 {
     if (direction != 0) {
+        struct Preferences_t * prefs = get_preferences();
         uint8_t chip = 0; //TODO: loop through chips
         q13_2 volume_in_db_x4 = cs3318_getVolReg(chip, 0x11);
-        volume_in_db_x4 += direction * preferences.vol_stepsize;
-        if (volume_in_db_x4 <= preferences.vol_max << 2 && volume_in_db_x4 >= preferences.vol_min << 2) {
             DEBUG_PRINT(1, "Set mastervolume to %d: %.2f\n", volume_in_db_x4, (float)volume_in_db_x4 / 4.0f);
+        volume_in_db_x4 += direction * prefs->vol_stepsize;
+        if (volume_in_db_x4 <= prefs->vol_max << 2 && volume_in_db_x4 >= prefs->vol_min << 2) {
             cs3318_setVolReg(chip, 0x11, volume_in_db_x4);
         }
     }
@@ -119,6 +119,8 @@ void cs3318_stepMasterVol(int direction)
 
 void cs3318_init(void)
 {
+    struct Preferences_t * prefs = get_preferences();
+
     /* Take CS3318 out of reset */
     CS3318_RESET_PORT.DIRSET = CS3318_RESET_PIN_bm;
     CS3318_RESET_PORT.OUTCLR = CS3318_RESET_PIN_bm;
@@ -128,7 +130,7 @@ void cs3318_init(void)
     // Read ID of first chip at default addr
 
     /* Set master volume */
-    cs3318_setVolReg(0, 0x11, preferences.vol_startup << 2);
+    cs3318_setVolReg(0, 0x11, prefs->vol_startup << 2);
 
     /* Power up cs3318 */
     cs3318_write(0, 0xe, 0);

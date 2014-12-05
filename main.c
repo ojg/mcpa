@@ -28,12 +28,17 @@ typedef struct {
 } Tasklist_t;
 
 struct Preferences_t preferences;
+
 struct Preferences_t EEMEM eeprom_preferences = {
     .vol_stepsize = 2 << 2,     // in quarter-dB
     .vol_startup = -20,         // in dB
     .vol_min = -96,             // in dB
     .vol_max = 22,              // in dB
 };
+
+struct Preferences_t * get_preferences(void) {
+    return &preferences;
+}
 
 void cmd_MasterVol(char *);
 void cmd_MasterVol_help(void);
@@ -42,7 +47,6 @@ void cmd_Debug_help(void);
 void cmd_Prefs(char *);
 void cmd_Prefs_help(void);
 bool rotary_task(void);
-void cs3318_init(void);
 
 uint8_t debuglevel = 0;
 

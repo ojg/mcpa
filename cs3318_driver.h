@@ -9,10 +9,9 @@
 #ifndef CS3318_DRIVER_H_
 #define CS3318_DRIVER_H_
 
+#include "preferences.h" //for q13_2
 #include <inttypes.h>
 #include <stdbool.h>
-
-typedef int16_t q13_2;
 
 void cs3318_init(void);
 void cs3318_stepMasterVol(int direction);
