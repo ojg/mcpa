@@ -49,6 +49,9 @@ void cmd_Prefs_help(void);
 bool rotary_task(void);
 
 uint8_t debuglevel = 0;
+inline uint8_t get_debuglevel() {
+    return debuglevel;
+}
 
 Task_flag_t taskflags = 0;
 

@@ -12,8 +12,6 @@
 
 #include <stdio.h>
 
-extern uint8_t debuglevel;
-
 #define MAX_SLAVES 4
 uint8_t cs3318_addr[MAX_SLAVES] = {0x40, 0, 0, 0};
 

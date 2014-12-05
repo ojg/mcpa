@@ -35,6 +35,7 @@ typedef volatile uint8_t Task_flag_t;
 #define Task_CLI_bm 1
 #define Task_Rotary_bm 2
 
-#define DEBUG_PRINT(level, format, ...) if (debuglevel >= level) printf(format, ##__VA_ARGS__)
+uint8_t get_debuglevel();
+#define DEBUG_PRINT(level, format, ...) if (get_debuglevel() >= level) printf(format, ##__VA_ARGS__)
 
 #endif /* INCFILE1_H_ */

@@ -69,9 +69,6 @@
 #include "board.h"
 #include <stdio.h>
 
-extern uint8_t debuglevel;
-#define DEBUG_PRINT(level, format, ...) if (debuglevel >= level) printf(format, ##__VA_ARGS__)
-
 static int uart_getchar(FILE *stream);
 static int uart_putchar(char c, FILE *stream);
 
