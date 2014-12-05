@@ -131,38 +131,14 @@ int main(void)
     }
 }
 
-static q13_2 dB_to_q13_2(int msd, int lsd)
-{
-    int sign = 1;
-    q13_2 volume_in_db_x4 = ((q13_2)msd) << 2;
-
-    if (msd < 0)
-    sign = -1;
-
-    if (lsd >= 75) {
-        volume_in_db_x4 += sign * 3;
-    }
-    else if (lsd >= 50 || lsd == 5) {
-        volume_in_db_x4 += sign * 2;
-    }
-    else if (lsd >= 25) {
-        volume_in_db_x4 += sign * 1;
-    }
-
-    if (volume_in_db_x4 > (preferences.vol_max * 4) || volume_in_db_x4 < (preferences.vol_min * 4)) {
-        printf("Value outside range %d to %ddB\n", preferences.vol_max, preferences.vol_min);
-        volume_in_db_x4 = preferences.vol_min * 4;
-    }
-    return volume_in_db_x4;
-}
-
 void cmd_MasterVol(char * stropt)
 {
-    int numparams, msd, lsd=0, direction=0;
+    int numparams, direction=0;
     char subcmd[10];
+    float vol_db = 0.0f;
 
-    numparams = sscanf(stropt, "%9s %d.%d\n", subcmd, &msd, &lsd);
-    if (numparams > 3) {
+    numparams = sscanf(stropt, "%9s %f\n", subcmd, &vol_db);
+    if (numparams > 2) {
         printf("Unknown options\n");
         cmd_MasterVol_help();
         return;
@@ -171,7 +147,7 @@ void cmd_MasterVol(char * stropt)
     if (numparams < 1) {
         uint8_t chip = 0; //TODO: loop through chips
         q13_2 volume_in_db_x4 = cs3318_getVolReg(chip, 0x11);
-        printf("Master volume: %.2f dB\n", (float)volume_in_db_x4 / 4.0f);
+        printf("Master volume: %.2f dB\n", Q13_2_TO_FLOAT(volume_in_db_x4));
     }
     else if (!strncmp(subcmd, "up", 2)) {
         direction = 1;
@@ -180,17 +156,15 @@ void cmd_MasterVol(char * stropt)
         direction = -1;
     }
     else if (!strncmp(subcmd, "mute", 4)) {
-        if (numparams == 1) msd = 0;
-        cs3318_mute(msd, true);
+        cs3318_mute(numparams == 1 ? 0 : (uint8_t)vol_db, true);
     }
     else if (!strncmp(subcmd, "unmute", 6)) {
-        if (numparams == 1) msd = 0;
-        cs3318_mute(msd, false);
+        cs3318_mute(numparams == 1 ? 0 : (uint8_t)vol_db, false);
     }
     else if (!strncmp(subcmd, "set", 3)) {
         uint8_t chip = 0; //TODO: loop through chips
-        DEBUG_PRINT(1, "Set mastervolume to %d.%02d\n", msd, lsd);
-        cs3318_setVolReg(chip, 0x11, dB_to_q13_2(msd, lsd));
+        DEBUG_PRINT(1, "Set mastervolume to %.2fdB\n", vol_db);
+        cs3318_setVolReg(chip, 0x11, FLOAT_TO_Q13_2(vol_db));
     }
     else if (!strncmp(subcmd, "ch", 2)) {
         uint8_t chip = 0; //TODO: find chip from channel
@@ -200,7 +174,7 @@ void cmd_MasterVol(char * stropt)
             printf("Invalid channel\n");
             return;
         }
-        cs3318_setVolReg(chip, channel, dB_to_q13_2(msd, lsd));
+        cs3318_setVolReg(chip, channel, FLOAT_TO_Q13_2(vol_db));
     }
     else {
         printf("Unknown sub-command\n");
@@ -279,10 +253,11 @@ void cmd_Debug_help()
 
 void cmd_Prefs(char * stropt)
 {
-    int numparams, msd, lsd;
+    int numparams;
     char subcmd[16];
+    float vol_db;
 
-    numparams = sscanf(stropt, "%15s %d.%d\n", subcmd, &msd, &lsd);
+    numparams = sscanf(stropt, "%15s %f\n", subcmd, &vol_db);
     if (numparams > 3) {
         printf("Unknown options\n");
         cmd_Prefs_help();
@@ -290,7 +265,7 @@ void cmd_Prefs(char * stropt)
     }
     else if (numparams < 1) {
         printf("Preferences:\n");
-        printf(" stepsize: %d.%02d dB\n", preferences.vol_stepsize>>2, (preferences.vol_stepsize & 3) * 25);
+        printf(" stepsize: %.2f dB\n", Q13_2_TO_FLOAT(preferences.vol_stepsize));
         printf(" mute: %d dB\n", preferences.vol_mutedB);
         printf(" startup master: %d dB\n", preferences.vol_startup);
         printf(" max limit: %d dB\n", preferences.vol_max);
@@ -301,23 +276,23 @@ void cmd_Prefs(char * stropt)
         eeprom_update_block(&preferences, &eeprom_preferences, sizeof(preferences));
     }
     else if (!strncmp(subcmd, "max", 3)) {
-        if (msd <= 22 && msd >= preferences.vol_min) {
-            preferences.vol_max = msd;
+        if (vol_db <= 22.0f && vol_db >= preferences.vol_min) {
+            preferences.vol_max = vol_db;
         }
     }
     else if (!strncmp(subcmd, "min", 3)) {
-        if (msd <= preferences.vol_max && msd >= -96) {
-            preferences.vol_min = msd;
+        if (vol_db <= preferences.vol_max && vol_db >= -96.0f) {
+            preferences.vol_min = vol_db;
         }
     }
     else if (!strncmp(subcmd, "startup", 7)) {
-        if (msd <= preferences.vol_max && msd >= preferences.vol_min) {
-            preferences.vol_startup = msd;
+        if (vol_db <= preferences.vol_max && vol_db >= preferences.vol_min) {
+            preferences.vol_startup = vol_db;
         }
     }
     else if (!strncmp(subcmd, "stepsize", 8)) {
-        if (msd <= 20 && (msd > 0 || lsd > 0)) {
-            preferences.vol_stepsize = dB_to_q13_2(msd, lsd);
+        if (vol_db <= 20.0f && vol_db > 0.0f) {
+            preferences.vol_stepsize = FLOAT_TO_Q13_2(vol_db);
         }
     }
     else {

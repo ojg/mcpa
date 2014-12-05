@@ -85,7 +85,7 @@ void cs3318_mute(uint8_t channel, bool mute)
         DEBUG_PRINT(1, "%s master\n", mute ? "mute" : "unmute");
         if (mute) {
             cs3318_write(chip, 0x12, cs3318_read(chip, 0x12) | 0x2);
-            } else {
+        } else {
             cs3318_write(chip, 0x12, cs3318_read(chip, 0x12) & ~0x2);
         }
     }
@@ -93,7 +93,7 @@ void cs3318_mute(uint8_t channel, bool mute)
         DEBUG_PRINT(1, "%s channel %d\n", mute ? "mute" : "unmute", channel);
         if (mute) {
             cs3318_write(chip, 0x0a, cs3318_read(chip, 0x0a) | 1 << (channel-1));
-            } else {
+        } else {
             cs3318_write(chip, 0x0a, cs3318_read(chip, 0x0a) & ~(1 << (channel-1)));
         }
     }
@@ -109,9 +109,9 @@ void cs3318_stepMasterVol(int direction)
         struct Preferences_t * prefs = get_preferences();
         uint8_t chip = 0; //TODO: loop through chips
         q13_2 volume_in_db_x4 = cs3318_getVolReg(chip, 0x11);
-            DEBUG_PRINT(1, "Set mastervolume to %d: %.2f\n", volume_in_db_x4, (float)volume_in_db_x4 / 4.0f);
         volume_in_db_x4 += direction * prefs->vol_stepsize;
         if (volume_in_db_x4 <= prefs->vol_max << 2 && volume_in_db_x4 >= prefs->vol_min << 2) {
+            DEBUG_PRINT(1, "Set mastervolume to %d: %.2f\n", volume_in_db_x4, Q13_2_TO_FLOAT(volume_in_db_x4));
             cs3318_setVolReg(chip, 0x11, volume_in_db_x4);
         }
     }
