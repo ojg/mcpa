@@ -54,6 +54,9 @@ inline uint8_t get_debuglevel() {
 }
 
 Task_flag_t taskflags = 0;
+void set_taskflags(Task_flag_t bitmask) {
+    taskflags |= bitmask;
+}
 
 int main(void)
 {
@@ -221,11 +224,11 @@ ISR(PORTD_INT_vect)
 
     if (ROT_PORT.INTFLAGS & ROT_A_PIN_bm) {
         ROT_PORT.INTFLAGS |=  ROT_A_PIN_bm;
-        taskflags |= Task_Rotary_bm;
+        set_taskflags(Task_Rotary_bm);
     }
     else if (ROT_PORT.INTFLAGS & ROT_B_PIN_bm) {
         ROT_PORT.INTFLAGS |=  ROT_B_PIN_bm;
-        taskflags |= Task_Rotary_bm;
+        set_taskflags(Task_Rotary_bm);
     }
 }
 

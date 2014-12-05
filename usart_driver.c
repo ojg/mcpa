@@ -75,8 +75,6 @@ static int uart_putchar(char c, FILE *stream);
 USART_data_t USART_data;
 FILE usart_stream = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW);
 
-extern Task_flag_t taskflags;
-
 /*! \brief Initializes buffer and selects what USART module to use.
  *
  *  Initializes receive and transmit buffer and selects what USART module to use,
@@ -282,7 +280,7 @@ static inline bool USART_RXComplete(USART_data_t * usart_data)
             tails[histi] = usart_data->buffer.RX_Tail;
             histi = (histi + 1) & 7;
 
-            taskflags |= Task_CLI_bm;
+            set_taskflags(Task_CLI_bm);
         }
     }
     else if (c == 9) { // TAB for previous command
