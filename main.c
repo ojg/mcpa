@@ -48,7 +48,7 @@ void cmd_Prefs(char *);
 void cmd_Prefs_help(void);
 bool rotary_task(void);
 
-uint8_t debuglevel = 0;
+uint8_t debuglevel = 1;
 inline uint8_t get_debuglevel() {
     return debuglevel;
 }
@@ -151,7 +151,7 @@ void cmd_MasterVol(char * stropt)
     }
     
     if (numparams < 1) {
-        uint8_t chip = 0; //TODO: loop through chips
+        uint8_t chip = 0; //Master volume should be the same on all slave boards
         q13_2 volume_in_db_x4 = cs3318_getVolReg(chip, 0x11);
         printf("Master volume: %.2f dB\n", Q13_2_TO_FLOAT(volume_in_db_x4));
     }
@@ -168,9 +168,10 @@ void cmd_MasterVol(char * stropt)
         cs3318_mute(numparams == 1 ? 0 : (uint8_t)vol_db, false);
     }
     else if (!strncmp(subcmd, "set", 3)) {
-        uint8_t chip = 0; //TODO: loop through chips
-        DEBUG_PRINT(1, "Set mastervolume to %.2fdB\n", vol_db);
-        cs3318_setVolReg(chip, 0x11, FLOAT_TO_Q13_2(vol_db));
+        DEBUG_PRINT(1, "Set mastervolume to %.2fdB in %d boards\n", vol_db, cs3318_get_nslaves());
+        for (uint8_t i = 0; i < cs3318_get_nslaves(); i++) {
+            cs3318_setVolReg(i, 0x11, FLOAT_TO_Q13_2(vol_db));
+        }
     }
     else if (!strncmp(subcmd, "ch", 2)) {
         uint8_t chip = 0; //TODO: find chip from channel

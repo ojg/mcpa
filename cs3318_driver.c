@@ -13,7 +13,12 @@
 #include <stdio.h>
 
 #define MAX_SLAVES 4
-uint8_t cs3318_addr[MAX_SLAVES] = {0x40, 0, 0, 0};
+static uint8_t cs3318_addr[MAX_SLAVES] = {0, 0, 0, 0};
+static uint8_t cs3318_nslaves = 1;
+
+uint8_t cs3318_get_nslaves() {
+    return cs3318_nslaves;
+}
 
 static void cs3318_write(uint8_t chip, uint8_t addr, uint8_t value)
 {
@@ -39,7 +44,7 @@ static uint8_t cs3318_read(uint8_t chip, uint8_t addr)
     }
     if (twiMaster->result == TWIM_RESULT_NACK_RECEIVED) {
         printf("Error: I2C NAK received\n");
-        return 0;
+        return 0; //TODO: Handle return better, 0 may be a correct register value
     }
 
     DEBUG_PRINT(2, "0x%02X\n", twiMaster->readData[0]);
@@ -79,16 +84,20 @@ void cs3318_setVolReg(uint8_t chip, uint8_t regaddr, q13_2 volume_in_db_x4)
 
 void cs3318_mute(uint8_t channel, bool mute)
 {
-    uint8_t chip = 0; //TODO: loop through chips
     if (channel == 0) { //master
         DEBUG_PRINT(1, "%s master\n", mute ? "mute" : "unmute");
         if (mute) {
-            cs3318_write(chip, 0x12, cs3318_read(chip, 0x12) | 0x2);
+            for (uint8_t i = 0; i < cs3318_nslaves; i++) {
+                cs3318_write(i, 0x12, cs3318_read(i, 0x12) | 0x2);
+            }
         } else {
-            cs3318_write(chip, 0x12, cs3318_read(chip, 0x12) & ~0x2);
+            for (uint8_t i = 0; i < cs3318_nslaves; i++) {
+                cs3318_write(i, 0x12, cs3318_read(i, 0x12) & ~0x2);
+            }
         }
     }
-    else if (channel < 8) {
+    else if (channel < 8) {  //TODO: select chip from channel
+        uint8_t chip = 0;
         DEBUG_PRINT(1, "%s channel %d\n", mute ? "mute" : "unmute", channel);
         if (mute) {
             cs3318_write(chip, 0x0a, cs3318_read(chip, 0x0a) | 1 << (channel-1));
@@ -106,31 +115,55 @@ void cs3318_stepMasterVol(int direction)
 {
     if (direction != 0) {
         struct Preferences_t * prefs = get_preferences();
-        uint8_t chip = 0; //TODO: loop through chips
-        q13_2 volume_in_db_x4 = cs3318_getVolReg(chip, 0x11);
+        q13_2 volume_in_db_x4 = cs3318_getVolReg(0, 0x11);
         volume_in_db_x4 += direction * prefs->vol_stepsize;
         if (volume_in_db_x4 <= prefs->vol_max << 2 && volume_in_db_x4 >= prefs->vol_min << 2) {
             DEBUG_PRINT(1, "Set mastervolume to %d: %.2f\n", volume_in_db_x4, Q13_2_TO_FLOAT(volume_in_db_x4));
-            cs3318_setVolReg(chip, 0x11, volume_in_db_x4);
+            for (uint8_t i = 0; i < cs3318_nslaves; i++) {
+                cs3318_setVolReg(i, 0x11, volume_in_db_x4);
+            }
         }
     }
 }
 
 void cs3318_init(void)
 {
+    uint8_t i;
+    uint8_t data[2];
     struct Preferences_t * prefs = get_preferences();
+    TWI_Master_t * twiMaster = get_TWI_master();
 
     /* Take CS3318 out of reset */
     CS3318_RESET_PORT.DIRSET = CS3318_RESET_PIN_bm;
     CS3318_RESET_PORT.OUTCLR = CS3318_RESET_PIN_bm;
     CS3318_RESET_PORT.OUTSET = CS3318_RESET_PIN_bm;
     
-    // TODO: Find and init all chips
-    // Read ID of first chip at default addr
+    // Find all slave boards
+    for (cs3318_nslaves = 0; cs3318_nslaves < MAX_SLAVES; cs3318_nslaves++) {
+        // Read 0x1c of chip at default addr
+        data[0] = 0x1c;
+        TWI_MasterWriteRead(twiMaster, 0x40, data, 1, 1);
+        while (twiMaster->status != TWIM_STATUS_READY) {}
+        if (twiMaster->result == TWIM_RESULT_NACK_RECEIVED)
+            break;
+        DEBUG_PRINT(1, "Found CS3318 number %d\n", cs3318_nslaves);
 
-    /* Set master volume */
-    cs3318_setVolReg(0, 0x11, prefs->vol_startup << 2);
+        // If not NAK then write new addr to 0x1b + enout bit
+        cs3318_addr[cs3318_nslaves] = 0x40 + cs3318_nslaves + 1;
+        data[0] = 0x1b;
+        data[1] = (cs3318_addr[cs3318_nslaves] << 1) | 1;
+        TWI_MasterWrite(twiMaster, 0x40, data, 2);
+        while (twiMaster->status != TWIM_STATUS_READY) {}
+        DEBUG_PRINT(1, "Write address %d\n", cs3318_addr[cs3318_nslaves]);
+    }
 
-    /* Power up cs3318 */
-    cs3318_write(0, 0xe, 0);
+    // Set master volume
+    for (i = 0; i < cs3318_nslaves; i++) {
+        cs3318_setVolReg(i, 0x11, prefs->vol_startup << 2);
+    }
+
+    // Power up cs3318
+    for (i = 0; i < cs3318_nslaves; i++) {
+        cs3318_write(i, 0xe, 0);
+    }
 }

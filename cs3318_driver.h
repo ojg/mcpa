@@ -13,6 +13,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
+uint8_t cs3318_get_nslaves(void);
 void cs3318_init(void);
 void cs3318_stepMasterVol(int direction);
 void cs3318_mute(uint8_t channel, bool mute);
