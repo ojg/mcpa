@@ -174,11 +174,12 @@ void cmd_MasterVol(char * stropt)
         }
     }
     else if (!strncmp(subcmd, "ch", 2)) {
-        uint8_t chip = 0; //TODO: find chip from channel
         int channel;
         numparams = sscanf(subcmd, "ch%d", &channel);
-        if (numparams != 1 || channel < 1 || channel > 8) {
-            printf("Invalid channel\n");
+        uint8_t chip = (channel - 1) >> 3;
+        channel = ((channel - 1) & 0x7) + 1;
+        if (numparams != 1 || channel < 1 || channel > 8 || chip >= cs3318_get_nslaves()) {
+            printf("Invalid channel %d\n", channel);
             return;
         }
         cs3318_setVolReg(chip, channel, FLOAT_TO_Q13_2(vol_db));
@@ -199,7 +200,7 @@ void cmd_MasterVol_help()
     "vol mute [channel]\n" \
     "vol unmute [channel]\n" \
     "vol set [master value in dB]\n" \
-    "vol ch[channel number] [offset value in dB]\n" \
+    "vol ch[channel number >= 1] [offset value in dB]\n" \
     "Example: vol set -23.75\n" \
     "Example: vol ch3 -2.5\n"));
 }

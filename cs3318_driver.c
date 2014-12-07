@@ -96,17 +96,19 @@ void cs3318_mute(uint8_t channel, bool mute)
             }
         }
     }
-    else if (channel < 8) {  //TODO: select chip from channel
-        uint8_t chip = 0;
-        DEBUG_PRINT(1, "%s channel %d\n", mute ? "mute" : "unmute", channel);
-        if (mute) {
-            cs3318_write(chip, 0x0a, cs3318_read(chip, 0x0a) | 1 << (channel-1));
-        } else {
-            cs3318_write(chip, 0x0a, cs3318_read(chip, 0x0a) & ~(1 << (channel-1)));
-        }
-    }
     else {
-        printf_P(PSTR("Wrong channel number\n"));
+        uint8_t chip = (channel - 1) >> 3;
+        if (chip >= cs3318_nslaves) {
+            printf("Invalid channel %d\n", channel);
+            return;
+        }
+        DEBUG_PRINT(1, "%s channel %d\n", mute ? "mute" : "unmute", channel);
+        channel = (channel - 1) & 0x7;
+        if (mute) {
+            cs3318_write(chip, 0x0a, cs3318_read(chip, 0x0a) | 1 << channel);
+        } else {
+            cs3318_write(chip, 0x0a, cs3318_read(chip, 0x0a) & ~(1 << channel));
+        }
     }
 }
 
