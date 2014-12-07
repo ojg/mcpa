@@ -170,6 +170,11 @@ void cs3318_init(void)
         }
     }
 
+    // Power down channels
+    for (i = 0; i < cs3318_nslaves; i++) {
+        cs3318_write(i, 0xd, prefs->ch_powerdown[i]);
+    }
+
     // Power up cs3318
     for (i = 0; i < cs3318_nslaves; i++) {
         cs3318_write(i, 0xe, 0);

@@ -34,6 +34,8 @@ struct Preferences_t EEMEM eeprom_preferences = {
     .vol_startup = -20,         // in dB
     .vol_min = -96,             // in dB
     .vol_max = 22,              // in dB
+    .ch_powerdown = { 0xFF, 0xFF, 0xFF, 0xFF }, // all on
+    .vol_ch_offset = { 0 }, // in Q5_2 format
 };
 
 struct Preferences_t * get_preferences(void) {
@@ -274,13 +276,14 @@ void cmd_Prefs(char * stropt)
     else if (numparams < 1) {
         printf("Preferences:\n");
         printf(" stepsize: %.2f dB\n", Q13_2_TO_FLOAT(preferences.vol_stepsize));
-        printf(" mute: %d dB\n", preferences.vol_mutedB);
         printf(" startup master: %d dB\n", preferences.vol_startup);
         printf(" max limit: %d dB\n", preferences.vol_max);
         printf(" min limit: %d dB\n", preferences.vol_min);
         for (uint8_t i = 0; i < cs3318_get_nslaves(); i++) {
+            printf(" Board %d:\n", i);
+            printf("  Powerdown: 0x%02X\n", preferences.ch_powerdown[i]);
             for (uint8_t ch = 0; ch < 8; ch++) {
-                printf(" offset board %d channel %d: %.2f dB\n", i, ch + 1, Q5_2_TO_FLOAT(preferences.vol_ch_offset[i * 8 + ch]));
+                printf("  Offset channel %d: %.2f dB\n", ch + 1, Q5_2_TO_FLOAT(preferences.vol_ch_offset[i * 8 + ch]));
             }
         }
         return;
@@ -299,6 +302,7 @@ void cmd_Prefs(char * stropt)
         }
     }
     else if (!strncmp(subcmd, "startup", 7)) {
+        DEBUG_PRINT(1, "Set startup to %.2f dB\n", vol_db);
         if (vol_db <= preferences.vol_max && vol_db >= preferences.vol_min) {
             preferences.vol_startup = vol_db;
         }
@@ -310,16 +314,26 @@ void cmd_Prefs(char * stropt)
     }
     else if (!strncmp(subcmd, "offset", 6)) {
         int channel;
-        numparams = sscanf(subcmd, "offset%d", &channel);
+        numparams = sscanf(stropt, "offset %d %f", &channel, &vol_db);
         uint8_t chip = (channel - 1) >> 3;
         channel = ((channel - 1) & 0x7) + 1;
-        if (numparams != 1 || channel < 1 || channel > 8 || chip >= cs3318_get_nslaves()) {
+        if (numparams != 2 || channel < 1 || channel > 8 || chip >= cs3318_get_nslaves()) {
             printf("Invalid channel %d\n", channel);
             return;
         }
         if (vol_db <= 32.0f && vol_db >= -32.0f) {
             preferences.vol_ch_offset[chip * 8 + channel - 1] = FLOAT_TO_Q5_2(vol_db);
         }
+    }
+    else if (!strncmp(subcmd, "powerdown", 9)) {
+        int bitmask, chip;
+        numparams = sscanf(stropt, "powerdown %i %i\n", &chip, &bitmask);
+        if (numparams != 2 || chip >= cs3318_get_nslaves()) {
+            printf("Invalid parameters\n");
+            return;
+        }
+        DEBUG_PRINT(1, "Set powerdown for board %d = 0x%02X\n", chip, bitmask);
+        preferences.ch_powerdown[chip - 1] = bitmask;
     }
     else {
         printf("Unknown sub-command\n");
@@ -335,7 +349,8 @@ void cmd_Prefs_help(void)
     "prefs min [value in dB]\n" \
     "prefs startup [value in dB]\n" \
     "prefs stepsize [value in 1/4 dB resolution]\n" \
-    "prefs offset[channel number >= 1] [value in dB <-33,32>]\n" \
+    "prefs offset [channel number >= 1] [value in dB <-33,32>]\n" \
+    "prefs powerdown [board number >= 1] [8-bit bitmask, 0 = powerdown]\n" \
     "example: prefs stepsize 2.5\n" \
     "example: prefs offset 7 -3.25\n"));
 }

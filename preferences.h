@@ -17,10 +17,10 @@ typedef int8_t q5_2;
 
 struct Preferences_t {
     q13_2 vol_stepsize;
-    int8_t vol_mutedB;
     int8_t vol_startup;
     int8_t vol_min;
     int8_t vol_max;
+    uint8_t ch_powerdown[MAX_SLAVE_BOARDS]; // bit set to zero -> powerdown corr. channel
     q5_2 vol_ch_offset[MAX_SLAVE_BOARDS * 8];
 };
 

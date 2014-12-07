@@ -20,7 +20,7 @@ To-do list
 - [x] CLI command history
 - [x] Slave board expansion: 16+ channels
 - [x] Preferences - channel offsets
-- Preferences - channel powerdown
+- [x] Preferences - channel powerdown
 - Preferences - RC5 codes
 - RC5 - volume up/down
 - RC5 - learning mode
