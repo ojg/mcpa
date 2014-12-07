@@ -18,7 +18,8 @@ To-do list
 - [x] Preferences - mute
 - [x] UART bootloader
 - [x] CLI command history
-- Preferences - channel offsets
+- [x] Slave board expansion: 16+ channels
+- [x] Preferences - channel offsets
 - Preferences - channel powerdown
 - Preferences - RC5 codes
 - RC5 - volume up/down
@@ -29,4 +30,3 @@ To-do list
 - MIDI control
 - Balance left/right
 - Auto-detect potmeter/rotary
-- 16+ channel expansion

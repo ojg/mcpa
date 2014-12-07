@@ -278,6 +278,11 @@ void cmd_Prefs(char * stropt)
         printf(" startup master: %d dB\n", preferences.vol_startup);
         printf(" max limit: %d dB\n", preferences.vol_max);
         printf(" min limit: %d dB\n", preferences.vol_min);
+        for (uint8_t i = 0; i < cs3318_get_nslaves(); i++) {
+            for (uint8_t ch = 0; ch < 8; ch++) {
+                printf(" offset board %d channel %d: %.2f dB\n", i, ch + 1, Q5_2_TO_FLOAT(preferences.vol_ch_offset[i * 8 + ch]));
+            }
+        }
         return;
     }
     else if (!strncmp(subcmd, "save", 4)) {
@@ -303,6 +308,19 @@ void cmd_Prefs(char * stropt)
             preferences.vol_stepsize = FLOAT_TO_Q13_2(vol_db);
         }
     }
+    else if (!strncmp(subcmd, "offset", 6)) {
+        int channel;
+        numparams = sscanf(subcmd, "offset%d", &channel);
+        uint8_t chip = (channel - 1) >> 3;
+        channel = ((channel - 1) & 0x7) + 1;
+        if (numparams != 1 || channel < 1 || channel > 8 || chip >= cs3318_get_nslaves()) {
+            printf("Invalid channel %d\n", channel);
+            return;
+        }
+        if (vol_db <= 32.0f && vol_db >= -32.0f) {
+            preferences.vol_ch_offset[chip * 8 + channel - 1] = FLOAT_TO_Q5_2(vol_db);
+        }
+    }
     else {
         printf("Unknown sub-command\n");
         cmd_Prefs_help();
@@ -317,5 +335,7 @@ void cmd_Prefs_help(void)
     "prefs min [value in dB]\n" \
     "prefs startup [value in dB]\n" \
     "prefs stepsize [value in 1/4 dB resolution]\n" \
-    "example: prefs stepsize 2.5\n"));
+    "prefs offset[channel number >= 1] [value in dB <-33,32>]\n" \
+    "example: prefs stepsize 2.5\n" \
+    "example: prefs offset 7 -3.25\n"));
 }

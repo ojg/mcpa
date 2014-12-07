@@ -12,8 +12,7 @@
 
 #include <stdio.h>
 
-#define MAX_SLAVES 4
-static uint8_t cs3318_addr[MAX_SLAVES] = {0, 0, 0, 0};
+static uint8_t cs3318_addr[MAX_SLAVE_BOARDS] = {0, 0, 0, 0};
 static uint8_t cs3318_nslaves = 1;
 
 uint8_t cs3318_get_nslaves() {
@@ -141,7 +140,7 @@ void cs3318_init(void)
     CS3318_RESET_PORT.OUTSET = CS3318_RESET_PIN_bm;
     
     // Find all slave boards
-    for (cs3318_nslaves = 0; cs3318_nslaves < MAX_SLAVES; cs3318_nslaves++) {
+    for (cs3318_nslaves = 0; cs3318_nslaves < MAX_SLAVE_BOARDS; cs3318_nslaves++) {
         // Read 0x1c of chip at default addr
         data[0] = 0x1c;
         TWI_MasterWriteRead(twiMaster, 0x40, data, 1, 1);
@@ -162,6 +161,13 @@ void cs3318_init(void)
     // Set master volume
     for (i = 0; i < cs3318_nslaves; i++) {
         cs3318_setVolReg(i, 0x11, prefs->vol_startup << 2);
+    }
+
+    // Set channel offsets
+    for (i = 0; i < cs3318_nslaves; i++) {
+        for (uint8_t ch = 0; ch < 8; ch++) {
+            cs3318_setVolReg(i, ch + 1, Q5_2_TO_Q13_2(prefs->vol_ch_offset[i * 8 + ch]));
+        }
     }
 
     // Power up cs3318
