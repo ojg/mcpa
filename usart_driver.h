@@ -285,6 +285,10 @@ typedef struct Usart_and_buffer
 
 
 /* Functions for interrupt driven driver. */
+void USART_InterruptDriver_Initialize(USART_data_t * usart_data, USART_t * usart, USART_DREINTLVL_t dreIntLevel);
+
+void USART_DataRegEmpty(USART_data_t * usart_data);
+
 void USART_init(USART_t * usart);
 
 #endif

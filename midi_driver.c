@@ -1,0 +1,61 @@
+/*
+ * midi_driver.c
+ *
+ * Created: 14.12.2014 21:44:12
+ *  Author: ole
+ */ 
+
+#include "usart_driver.h"
+#include "board.h"
+
+USART_data_t MIDI_data;
+
+void MIDI_init(USART_t * usart)
+{
+    MIDI_PORT.DIRSET   = MIDI_TX_PIN;
+    MIDI_PORT.DIRCLR   = MIDI_RX_PIN;
+    
+    // Use USARTD0 and initialize buffers
+    USART_InterruptDriver_Initialize(&MIDI_data, usart, USART_DREINTLVL_LO_gc);
+    
+    // USARTx0, 8 Data bits, No Parity, 1 Stop bit
+    USART_Format_Set(MIDI_data.usart, USART_CHSIZE_8BIT_gc,
+    USART_PMODE_DISABLED_gc, false);
+    
+    // Enable RXC interrupt
+    USART_RxdInterruptLevel_Set(MIDI_data.usart, USART_RXCINTLVL_LO_gc);
+    
+    // Set Baudrate to 31250 bps: (((F_CPU/baudrate) - 1) / 16)
+    USART_Baudrate_Set(usart, 126 , -1); // 31250
+
+    /* Enable both RX and TX. */
+    USART_Rx_Enable(MIDI_data.usart);
+    USART_Tx_Enable(MIDI_data.usart);
+
+    // Enable PMIC interrupt level low
+    PMIC.CTRL |= PMIC_LOLVLEX_bm;
+}
+
+static inline bool MIDI_RXComplete(USART_data_t * usart_data)
+{
+    return true;
+}
+
+//  Receive complete interrupt service routine.
+//  Calls the common receive complete handler with pointer to the correct USART
+//  as argument.
+ISR( MIDI_RXC_vect ) // Note that this vector name is a define mapped to the correct interrupt vector
+{                     // See "board.h"
+    LED_PORT.OUTCLR = LED_PIN_bm;
+    MIDI_RXComplete( &MIDI_data );
+}
+
+
+//  Data register empty  interrupt service routine.
+//  Calls the common data register empty complete handler with pointer to the
+//  correct USART as argument.
+ISR( MIDI_DRE_vect ) // Note that this vector name is a define mapped to the correct interrupt vector
+{                     // See "board.h"
+    LED_PORT.OUTCLR = LED_PIN_bm;
+    USART_DataRegEmpty( &MIDI_data );
+}

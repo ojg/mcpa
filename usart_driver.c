@@ -84,7 +84,7 @@ FILE usart_stream = FDEV_SETUP_STREAM(uart_putchar, uart_getchar, _FDEV_SETUP_RW
  *  \param usart                The USART module.
  *  \param dreIntLevel          Data register empty interrupt level.
  */
-static void USART_InterruptDriver_Initialize(USART_data_t * usart_data,
+void USART_InterruptDriver_Initialize(USART_data_t * usart_data,
                                       USART_t * usart,
                                       USART_DREINTLVL_t dreIntLevel)
 {
@@ -309,7 +309,7 @@ static inline bool USART_RXComplete(USART_data_t * usart_data)
  *
  *  \param usart_data      The USART_data_t struct instance.
  */
-static inline void USART_DataRegEmpty(USART_data_t * usart_data)
+void USART_DataRegEmpty(USART_data_t * usart_data)
 {
 	USART_Buffer_t * bufPtr;
 	bufPtr = &usart_data->buffer;

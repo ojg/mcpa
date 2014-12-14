@@ -27,6 +27,12 @@
 #define USART_RXC_vect USARTD0_RXC_vect
 #define USART_DRE_vect USARTD0_DRE_vect
 
+#define MIDI_TX_PIN PIN3_bm
+#define MIDI_RX_PIN PIN2_bm
+#define MIDI_PORT PORTC
+#define MIDI_RXC_vect USARTC0_RXC_vect
+#define MIDI_DRE_vect USARTC0_DRE_vect
+
 #define TWI_SDA_PIN_bm PIN0_bm
 #define TWI_SCL_PIN_bm PIN1_bm
 #define TWI_PORT PORTC

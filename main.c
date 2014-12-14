@@ -11,8 +11,9 @@
 #include "clksys_driver.h"
 #include "usart_driver.h"
 #include "twi_master_driver.h"
-#include "cli.h"
 #include "cs3318_driver.h"
+#include "midi_driver.h"
+#include "cli.h"
 #include "preferences.h"
 
 #include <avr/io.h>
@@ -111,6 +112,9 @@ int main(void)
     
     /* Read preferences from EEPROM to SRAM */
     eeprom_read_block(&preferences, &eeprom_preferences, sizeof(preferences));
+
+    /* Initialize MIDI USART */
+    MIDI_init(&USARTC0);
 
     /* Init CS3318 */
     cs3318_init();
