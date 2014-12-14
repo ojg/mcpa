@@ -34,7 +34,7 @@ struct Preferences_t EEMEM eeprom_preferences = {
     .vol_startup = -20,         // in dB
     .vol_min = -96,             // in dB
     .vol_max = 22,              // in dB
-    .ch_powerdown = { 0xFF, 0xFF, 0xFF, 0xFF }, // all on
+    .ch_powerdown = { 0 }, // all on
     .vol_ch_offset = { 0 }, // in Q5_2 format
 };
 
@@ -50,7 +50,7 @@ void cmd_Prefs(char *);
 void cmd_Prefs_help(void);
 bool rotary_task(void);
 
-uint8_t debuglevel = 1;
+uint8_t debuglevel = 0;
 inline uint8_t get_debuglevel() {
     return debuglevel;
 }
@@ -328,7 +328,7 @@ void cmd_Prefs(char * stropt)
     else if (!strncmp(subcmd, "powerdown", 9)) {
         int bitmask, chip;
         numparams = sscanf(stropt, "powerdown %i %i\n", &chip, &bitmask);
-        if (numparams != 2 || chip >= cs3318_get_nslaves()) {
+        if (numparams != 2 || chip > cs3318_get_nslaves()) {
             printf("Invalid parameters\n");
             return;
         }
