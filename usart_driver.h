@@ -64,9 +64,9 @@
 /* USART buffer defines. */
 
 /* \brief  Receive buffer size: 2,4,8,16,32,64,128 or 256 bytes. */
-#define USART_RX_BUFFER_SIZE 128
+#define USART_RX_BUFFER_SIZE 64
 /* \brief Transmit buffer size: 2,4,8,16,32,64,128 or 256 bytes */
-#define USART_TX_BUFFER_SIZE 128
+#define USART_TX_BUFFER_SIZE 64
 /* \brief Receive buffer mask. */
 #define USART_RX_BUFFER_MASK ( USART_RX_BUFFER_SIZE - 1 )
 /* \brief Transmit buffer mask. */
@@ -286,7 +286,7 @@ typedef struct Usart_and_buffer
 
 /* Functions for interrupt driven driver. */
 void USART_InterruptDriver_Initialize(USART_data_t * usart_data, USART_t * usart, USART_DREINTLVL_t dreIntLevel);
-
+bool USART_TXBuffer_PutByte(USART_data_t * usart_data, uint8_t data);
 void USART_DataRegEmpty(USART_data_t * usart_data);
 
 void USART_init(USART_t * usart);

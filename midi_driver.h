@@ -9,8 +9,9 @@
 #ifndef MIDI_DRIVER_H_
 #define MIDI_DRIVER_H_
 
+#include "preferences.h"
 
 void MIDI_init(USART_t * usart);
-
+void MIDI_send_mastervol(q13_2 volume_in_db_x4);
 
 #endif /* MIDI_DRIVER_H_ */

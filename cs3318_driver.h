@@ -15,7 +15,7 @@
 
 uint8_t cs3318_get_nslaves(void);
 void cs3318_init(void);
-void cs3318_stepMasterVol(int direction);
+q13_2 cs3318_stepMasterVol(int direction);
 void cs3318_mute(uint8_t channel, bool mute);
 void cs3318_setVolReg(uint8_t chip, uint8_t regaddr, q13_2 volume_in_db_x4);
 q13_2 cs3318_getVolReg(uint8_t chip, uint8_t regaddr);

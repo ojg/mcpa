@@ -7,6 +7,7 @@
 
 #include "usart_driver.h"
 #include "board.h"
+#include "preferences.h"
 
 USART_data_t MIDI_data;
 
@@ -36,7 +37,18 @@ void MIDI_init(USART_t * usart)
     PMIC.CTRL |= PMIC_LOLVLEX_bm;
 }
 
-static inline bool MIDI_RXComplete(USART_data_t * usart_data)
+void MIDI_send_mastervol(q13_2 volume_in_db_x4)
+{
+    USART_TXBuffer_PutByte(&MIDI_data, 0xB0);
+    USART_TXBuffer_PutByte(&MIDI_data, 7);
+    USART_TXBuffer_PutByte(&MIDI_data, ((volume_in_db_x4 >> 2) + 96) & 0x7f);
+    USART_TXBuffer_PutByte(&MIDI_data, 0xB0);
+    USART_TXBuffer_PutByte(&MIDI_data, 27);
+    USART_TXBuffer_PutByte(&MIDI_data, volume_in_db_x4 & 0x3);
+}
+
+
+static inline bool MIDI_RXComplete(void)
 {
     return true;
 }
@@ -47,7 +59,7 @@ static inline bool MIDI_RXComplete(USART_data_t * usart_data)
 ISR( MIDI_RXC_vect ) // Note that this vector name is a define mapped to the correct interrupt vector
 {                     // See "board.h"
     LED_PORT.OUTCLR = LED_PIN_bm;
-    MIDI_RXComplete( &MIDI_data );
+    MIDI_RXComplete();
 }
 
 

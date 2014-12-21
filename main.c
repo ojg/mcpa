@@ -145,9 +145,10 @@ int main(void)
 
 void cmd_MasterVol(char * stropt)
 {
-    int numparams, direction=0;
+    int numparams;
     char subcmd[10];
     float vol_db = 0.0f;
+    q13_2 vol_int;
 
     numparams = sscanf(stropt, "%9s %f\n", subcmd, &vol_db);
     if (numparams > 2) {
@@ -162,22 +163,28 @@ void cmd_MasterVol(char * stropt)
         printf("Master volume: %.2f dB\n", Q13_2_TO_FLOAT(volume_in_db_x4));
     }
     else if (!strncmp(subcmd, "up", 2)) {
-        direction = 1;
+        vol_int = cs3318_stepMasterVol(1);
+        MIDI_send_mastervol(vol_int);
     }
     else if (!strncmp(subcmd, "down", 4)) {
-        direction = -1;
+        vol_int = cs3318_stepMasterVol(-1);
+        MIDI_send_mastervol(vol_int);
     }
     else if (!strncmp(subcmd, "mute", 4)) {
         cs3318_mute(numparams == 1 ? 0 : (uint8_t)vol_db, true);
+        //TODO: Send MIDI mute cmd
     }
     else if (!strncmp(subcmd, "unmute", 6)) {
         cs3318_mute(numparams == 1 ? 0 : (uint8_t)vol_db, false);
+        //TODO: Send MIDI unmute cmd
     }
     else if (!strncmp(subcmd, "set", 3)) {
         DEBUG_PRINT(1, "Set mastervolume to %.2fdB in %d boards\n", vol_db, cs3318_get_nslaves());
+        vol_int = FLOAT_TO_Q13_2(vol_db);
         for (uint8_t i = 0; i < cs3318_get_nslaves(); i++) {
-            cs3318_setVolReg(i, 0x11, FLOAT_TO_Q13_2(vol_db));
+            cs3318_setVolReg(i, 0x11, vol_int);
         }
+        MIDI_send_mastervol(vol_int);
     }
     else if (!strncmp(subcmd, "ch", 2)) {
         int channel;
@@ -194,8 +201,6 @@ void cmd_MasterVol(char * stropt)
         printf("Unknown sub-command\n");
         cmd_MasterVol_help();
     }
-
-    cs3318_stepMasterVol(direction);
 }
 
 void cmd_MasterVol_help()
@@ -221,7 +226,8 @@ bool rotary_task(void)
     static uint8_t current_rotaryval = 0;
     uint8_t new_rotaryval = ROT_PORT.IN & 3;
     int8_t direction = direction_table[current_rotaryval<<2 | new_rotaryval];
-    cs3318_stepMasterVol(direction);
+    q13_2 vol_int = cs3318_stepMasterVol(direction);
+    MIDI_send_mastervol(vol_int);
     current_rotaryval = new_rotaryval;
     return true;
 }

@@ -112,7 +112,7 @@ void cs3318_mute(uint8_t channel, bool mute)
 }
 
 
-void cs3318_stepMasterVol(int direction)
+q13_2 cs3318_stepMasterVol(int direction)
 {
     if (direction != 0) {
         struct Preferences_t * prefs = get_preferences();
@@ -124,6 +124,7 @@ void cs3318_stepMasterVol(int direction)
                 cs3318_setVolReg(i, 0x11, volume_in_db_x4);
             }
         }
+        return volume_in_db_x4;
     }
 }
 

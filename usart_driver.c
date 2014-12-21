@@ -147,7 +147,7 @@ static inline bool USART_TXBuffer_FreeSpace(USART_data_t * usart_data)
  *  \param usart_data The USART_data_t struct instance.
  *  \param data       The data to send.
  */
-static bool USART_TXBuffer_PutByte(USART_data_t * usart_data, uint8_t data)
+bool USART_TXBuffer_PutByte(USART_data_t * usart_data, uint8_t data)
 {
     uint8_t tempCTRLA;
 	uint8_t tempTX_Head;
