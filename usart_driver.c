@@ -422,7 +422,7 @@ void USART_init(USART_t * usart)
 	USART_Tx_Enable(USART_data.usart);
 
 	// Enable PMIC interrupt level low
-	PMIC.CTRL |= PMIC_LOLVLEX_bm;
+	PMIC.CTRL |= PMIC_LOLVLEN_bm;
 	
 	stdout = stdin = &usart_stream;
 }

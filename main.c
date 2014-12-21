@@ -68,8 +68,9 @@ int main(void)
     /* Define a list of tasks */
 	Tasklist_t tasklist[] =
 	{
-		{cli_task, Task_CLI_bm},
+        {cli_task, Task_CLI_bm},
         {rotary_task, Task_Rotary_bm},
+        {MIDI_rx_task, Task_MIDI_RX_bm},
         {NULL, 0}
 	};
 

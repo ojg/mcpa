@@ -40,6 +40,7 @@
 typedef volatile uint8_t Task_flag_t;
 #define Task_CLI_bm 1
 #define Task_Rotary_bm 2
+#define Task_MIDI_RX_bm 4
 void set_taskflags(Task_flag_t bitmask);
 
 uint8_t get_debuglevel();

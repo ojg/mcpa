@@ -21,12 +21,12 @@ To-do list
 - [x] Slave board expansion: 16+ channels
 - [x] Preferences - channel offsets
 - [x] Preferences - channel powerdown
+- [x] MIDI control
 - Preferences - RC5 codes
 - RC5 - volume up/down
 - RC5 - learning mode
 - Potmeter
 - LED 4-digit
 - LCD
-- MIDI control
 - Balance left/right
 - Auto-detect potmeter/rotary
