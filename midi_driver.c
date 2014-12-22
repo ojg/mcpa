@@ -11,6 +11,8 @@
 #include <stdio.h>
 
 USART_data_t MIDI_data;
+enum MIDI_RX_state_t { IDLE, STATUS_RX, DATA1_RX, DATA2_RX};
+enum MIDI_RX_state_t MIDI_RX_state;
 
 void MIDI_init(USART_t * usart)
 {
@@ -65,11 +67,37 @@ static inline bool MIDI_RXComplete(USART_data_t * usart_data)
 bool MIDI_rx_task(void)
 {
     USART_Buffer_t * bufPtr = &MIDI_data.buffer;
+    uint8_t c = bufPtr->RX[bufPtr->RX_Tail];
+    static uint8_t data[3];
 
-    DEBUG_PRINT(2, "0x%02X\n", bufPtr->RX[bufPtr->RX_Tail]);
+    DEBUG_PRINT(2, "0x%02X\n", c);
 
     /* Advance buffer tail. */
     bufPtr->RX_Tail = (bufPtr->RX_Tail + 1) & USART_RX_BUFFER_MASK;
+
+    switch (MIDI_RX_state) {
+        case STATUS_RX:
+            if (!(c & 0x80)) {
+                data[1] = c;
+                MIDI_RX_state = DATA1_RX;
+            }
+            break;
+        case DATA1_RX:
+            if (!(c & 0x80)) {
+                data[2] = c;
+                DEBUG_PRINT(1, "0x%02X, 0x%02X, 0x%02X\n", data[0], data[1], data[2]);
+                MIDI_RX_state = IDLE;
+            }
+            break;
+        case IDLE:
+        default:  
+            if (c & 0x80) {
+                data[0] = c & 0x7f;
+                MIDI_RX_state = STATUS_RX;
+            }
+            break;
+    }
+
     return true;
 }
 
