@@ -13,6 +13,7 @@
 #include "twi_master_driver.h"
 #include "cs3318_driver.h"
 #include "midi_driver.h"
+#include "rc5_driver.h"
 #include "cli.h"
 #include "preferences.h"
 
@@ -117,6 +118,9 @@ int main(void)
     /* Initialize MIDI USART */
     MIDI_init(&USARTC0);
 
+    /* Initialize RC5 IR reciever */
+    rc5_init();
+    
     /* Init CS3318 */
     cs3318_init();
     
@@ -245,6 +249,8 @@ ISR(PORTD_INT_vect)
         ROT_PORT.INTFLAGS |=  ROT_B_PIN_bm;
         set_taskflags(Task_Rotary_bm);
     }
+    
+    rc5_irqhandler();
 }
 
 

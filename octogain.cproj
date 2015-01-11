@@ -153,6 +153,12 @@
     <Compile Include="preferences.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="rc5_driver.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="rc5_driver.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="twi_master_driver.c">
       <SubType>compile</SubType>
     </Compile>
