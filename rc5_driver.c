@@ -35,7 +35,7 @@ void rc5_irqhandler(void)
                 TCC4.CNT = 0;
                 TCC4.CTRLA |= TC45_CLKSEL_DIV64_gc; //500kHz
                 rc5_state = 1;
-                rc5_code = 1;
+                rc5_code = 0xFFFFFFFF;
                 DEBUG_PRINT(2, "start\n");
             }
         }
@@ -61,7 +61,7 @@ void rc5_irqhandler(void)
             else { //invalid period value
                 //DEBUG_PRINT(2, "restart\n");
                 rc5_state = 1;
-                rc5_code = 1;
+                rc5_code = 0xFFFFFFFF;
                 TCC4.CNT = 0;
                 TCC4.CTRLA |= TC45_CLKSEL_DIV64_gc; //500kHz
             }
@@ -76,7 +76,15 @@ void rc5_irqhandler(void)
     }
 }
 
-uint32_t get_rc5_code(void)
+uint16_t get_rc5_code(void)
 {
-    return rc5_code;
+    uint16_t temp=0;
+    //printf("MC: 0x%lX\n", rc5_code);
+    for (int i=0; i<14; i++) {
+        if (rc5_code & 1)
+            temp |= 0x4000;
+        temp >>= 1;
+        rc5_code >>= 2;
+    }
+    return ~temp;
 }

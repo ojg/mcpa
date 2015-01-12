@@ -376,6 +376,39 @@ void cmd_Prefs_help(void)
 
 bool IR_rx_task(void)
 {
-    printf("IR: %lu\n", get_rc5_code());
+    static uint8_t toggle = 0;
+    static bool mutestate = false;
+
+    uint16_t rc5_code = get_rc5_code();
+    DEBUG_PRINT(2, "IR: 0x%X\n", rc5_code);
+
+    if (!(rc5_code & 0x3000)) //must have two start bits
+        return true;
+
+    toggle = (toggle << 1) & 0x7;
+    if (rc5_code & 0x0800)
+        toggle |= 1;
+
+    if (toggle == 4 || toggle == 3) //wait for third consecutive code before repeating
+        return true;
+
+    switch (rc5_code & 0x07FF) {
+        case 0x0010:
+            cs3318_stepMasterVol(1);
+            break;
+        case 0x0011:
+            cs3318_stepMasterVol(-1);
+            break;
+        case 0x000D:
+            mutestate = !mutestate;
+            cs3318_mute(0, mutestate);
+            break;
+        case 0x000C:
+            DEBUG_PRINT(1, "IR Power on/off\n");
+            break;
+        default:
+            printf("Unknown IR code!\n");
+    }
+
     return true;
 }
