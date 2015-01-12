@@ -51,6 +51,7 @@ void cmd_Debug_help(void);
 void cmd_Prefs(char *);
 void cmd_Prefs_help(void);
 bool rotary_task(void);
+bool IR_rx_task(void);
 
 uint8_t debuglevel = 0;
 inline uint8_t get_debuglevel() {
@@ -72,6 +73,7 @@ int main(void)
         {cli_task, Task_CLI_bm},
         {rotary_task, Task_Rotary_bm},
         {MIDI_rx_task, Task_MIDI_RX_bm},
+        {IR_rx_task, Task_IR_RX_bm},
         {NULL, 0}
 	};
 
@@ -370,4 +372,10 @@ void cmd_Prefs_help(void)
     "prefs powerdown [board number >= 1] [8-bit bitmask, 0 = powerdown]\n" \
     "example: prefs stepsize 2.5\n" \
     "example: prefs offset 7 -3.25\n"));
+}
+
+bool IR_rx_task(void)
+{
+    printf("IR: %lu\n", get_rc5_code());
+    return true;
 }

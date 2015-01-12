@@ -12,5 +12,6 @@
 
 void rc5_init(void);
 void rc5_irqhandler(void);
+uint32_t get_rc5_code(void);
 
 #endif /* RC5_DRIVER_H_ */
