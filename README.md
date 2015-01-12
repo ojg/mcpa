@@ -22,8 +22,8 @@ To-do list
 - [x] Preferences - channel offsets
 - [x] Preferences - channel powerdown
 - [x] MIDI control
+- [x] RC5 - volume up/down
 - Preferences - RC5 codes
-- RC5 - volume up/down
 - RC5 - learning mode
 - Potmeter
 - LED 4-digit
