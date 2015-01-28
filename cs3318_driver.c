@@ -119,7 +119,7 @@ q13_2 cs3318_stepMasterVol(int direction)
         q13_2 volume_in_db_x4 = cs3318_getVolReg(0, 0x11);
         volume_in_db_x4 += direction * prefs->vol_stepsize;
         if (volume_in_db_x4 <= prefs->vol_max << 2 && volume_in_db_x4 >= prefs->vol_min << 2) {
-            DEBUG_PRINT(1, "Set mastervolume to %d: %.2f\n", volume_in_db_x4, Q13_2_TO_FLOAT(volume_in_db_x4));
+            DEBUG_PRINT(1, "Set mastervolume to %d: %.2f dB\n", volume_in_db_x4, Q13_2_TO_FLOAT(volume_in_db_x4));
             for (uint8_t i = 0; i < cs3318_nslaves; i++) {
                 cs3318_setVolReg(i, 0x11, volume_in_db_x4);
             }

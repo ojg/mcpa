@@ -378,6 +378,7 @@ bool IR_rx_task(void)
 {
     static uint8_t toggle = 0;
     static bool mutestate = false;
+    q13_2 vol_int;
 
     uint16_t rc5_code = get_rc5_code();
     DEBUG_PRINT(2, "IR: 0x%X\n", rc5_code);
@@ -394,14 +395,17 @@ bool IR_rx_task(void)
 
     switch (rc5_code & 0x07FF) {
         case 0x0010:
-            cs3318_stepMasterVol(1);
+            vol_int = cs3318_stepMasterVol(1);
+            MIDI_send_mastervol(vol_int);
             break;
         case 0x0011:
-            cs3318_stepMasterVol(-1);
+            vol_int = cs3318_stepMasterVol(-1);
+            MIDI_send_mastervol(vol_int);
             break;
         case 0x000D:
-            mutestate = !mutestate;
+            mutestate = !mutestate;  //TODO: mutestate not synchronized with other commands
             cs3318_mute(0, mutestate);
+            //TODO: Send MIDI mute cmd
             break;
         case 0x000C:
             DEBUG_PRINT(1, "IR Power on/off\n");
