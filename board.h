@@ -13,6 +13,7 @@
 
 #define IR_PIN_bm PIN4_bm
 #define IR_PORT PORTD
+#define IR_PINCTRL PIN4CTRL
 
 #define ROT_A_PIN_bm PIN0_bm
 #define ROT_B_PIN_bm PIN1_bm

@@ -13,9 +13,9 @@
 void rc5_init(void)
 {
     /* Init pin change irq */
-    IR_PORT.DIRCLR = IR_PIN_bm | IR_PIN_bm;
-    IR_PORT.PIN4CTRL = PORT_OPC_PULLUP_gc;
-    IR_PORT.INTMASK = IR_PIN_bm;
+    IR_PORT.DIRCLR = IR_PIN_bm;
+    IR_PORT.IR_PINCTRL = PORT_OPC_PULLUP_gc;
+    IR_PORT.INTMASK |= IR_PIN_bm;
     IR_PORT.INTCTRL = PORT_INTLVL_MED_gc;
     PMIC.CTRL |= PMIC_MEDLVLEN_bm;
 }
