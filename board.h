@@ -19,8 +19,8 @@
 #define ROT_B_PIN_bm PIN1_bm
 #define ROT_PORT PORTD
 
-#define LED_PIN_bm PIN5_bm
-#define LED_PORT PORTD
+#define DEBUGLED_PIN_bm PIN5_bm
+#define DEBUGLED_PORT PORTD
 
 #define CS3318_RESET_PIN_bm PIN7_bm
 #define CS3318_RESET_PORT PORTD

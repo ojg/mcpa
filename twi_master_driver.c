@@ -480,6 +480,6 @@ void cmd_iicw_help() {
 
 ISR(TWIC_TWIM_vect)
 {
-    LED_PORT.OUTCLR = LED_PIN_bm;
+    DEBUGLED_PORT.OUTCLR = DEBUGLED_PIN_bm;
     TWI_MasterInterruptHandler(&twiMaster);
 }

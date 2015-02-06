@@ -433,7 +433,7 @@ void USART_init(USART_t * usart)
 //  as argument.
 ISR( USART_RXC_vect ) // Note that this vector name is a define mapped to the correct interrupt vector
 {                     // See "board.h"
-    LED_PORT.OUTCLR = LED_PIN_bm;
+    DEBUGLED_PORT.OUTCLR = DEBUGLED_PIN_bm;
 	USART_RXComplete( &USART_data );
 }
 
@@ -443,6 +443,6 @@ ISR( USART_RXC_vect ) // Note that this vector name is a define mapped to the co
 //  correct USART as argument.
 ISR( USART_DRE_vect ) // Note that this vector name is a define mapped to the correct interrupt vector
 {                     // See "board.h"
-    LED_PORT.OUTCLR = LED_PIN_bm;
+    DEBUGLED_PORT.OUTCLR = DEBUGLED_PIN_bm;
 	USART_DataRegEmpty( &USART_data );
 }

@@ -106,7 +106,7 @@ bool MIDI_rx_task(void)
 //  as argument.
 ISR( MIDI_RXC_vect ) // Note that this vector name is a define mapped to the correct interrupt vector
 {                     // See "board.h"
-    LED_PORT.OUTCLR = LED_PIN_bm;
+    DEBUGLED_PORT.OUTCLR = DEBUGLED_PIN_bm;
     MIDI_RXComplete(&MIDI_data);
 }
 
@@ -116,6 +116,6 @@ ISR( MIDI_RXC_vect ) // Note that this vector name is a define mapped to the cor
 //  correct USART as argument.
 ISR( MIDI_DRE_vect ) // Note that this vector name is a define mapped to the correct interrupt vector
 {                     // See "board.h"
-    LED_PORT.OUTCLR = LED_PIN_bm;
+    DEBUGLED_PORT.OUTCLR = DEBUGLED_PIN_bm;
     USART_DataRegEmpty( &MIDI_data );
 }

@@ -95,7 +95,7 @@ int main(void)
     register_cli_command("debug", cmd_Debug, cmd_Debug_help);
 
     /* Set debug LED pin to output */
-    LED_PORT.DIRSET = LED_PIN_bm;
+    DEBUGLED_PORT.DIRSET = DEBUGLED_PIN_bm;
 
     /* Initialize debug USART */
 	USART_init(&USARTD0);
@@ -143,7 +143,7 @@ int main(void)
                 i++;
             }
         }
-        LED_PORT.OUTSET = LED_PIN_bm;
+        DEBUGLED_PORT.OUTSET = DEBUGLED_PIN_bm;
         sleep_enable();
         sleep_cpu();
         sleep_disable();
@@ -241,7 +241,7 @@ bool rotary_task(void)
 
 ISR(PORTD_INT_vect)
 {
-    LED_PORT.OUTCLR = LED_PIN_bm;
+    DEBUGLED_PORT.OUTCLR = DEBUGLED_PIN_bm;
 
     if (ROT_PORT.INTFLAGS & ROT_A_PIN_bm) {
         ROT_PORT.INTFLAGS |=  ROT_A_PIN_bm;
