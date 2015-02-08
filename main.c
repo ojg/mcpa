@@ -54,6 +54,8 @@ bool rotary_task(void);
 bool IR_rx_task(void);
 static void display_volume(q13_2 volume_x4);
 
+static bool mutestate = false;
+
 uint8_t debuglevel = 0;
 inline uint8_t get_debuglevel() {
     return debuglevel;
@@ -194,6 +196,14 @@ static void display_volume(q13_2 volume_x4)
     led_digits[3] = number_to_digit[str[4] - 48];
 }
 
+static void display_mute(void)
+{
+    led_digits[0] = 64;
+    led_digits[1] = 64;
+    led_digits[2] = 64;
+    led_digits[3] = 64;
+}
+
 ISR(TCC5_CCA_vect)
 {
     if (++led_count > 3) {
@@ -236,21 +246,27 @@ void cmd_MasterVol(char * stropt)
     }
     else if (!strncmp(subcmd, "mute", 4)) {
         cs3318_mute(numparams == 1 ? 0 : (uint8_t)vol_db, true);
+        display_mute();
         //TODO: Send MIDI mute cmd
     }
     else if (!strncmp(subcmd, "unmute", 6)) {
         cs3318_mute(numparams == 1 ? 0 : (uint8_t)vol_db, false);
+        display_volume(cs3318_getVolReg(0, 0x11));
         //TODO: Send MIDI unmute cmd
     }
     else if (!strncmp(subcmd, "set", 3)) {
+        struct Preferences_t * prefs = get_preferences();
+
         DEBUG_PRINT(1, "Set mastervolume to %.2fdB in %d boards\n", vol_db, cs3318_get_nslaves());
         vol_int = FLOAT_TO_Q13_2(vol_db);
-        //TODO: Range check on vol
-        for (uint8_t i = 0; i < cs3318_get_nslaves(); i++) {
-            cs3318_setVolReg(i, 0x11, vol_int);
+
+        if (vol_int <= prefs->vol_max << 2 && vol_int >= prefs->vol_min << 2) {
+            for (uint8_t i = 0; i < cs3318_get_nslaves(); i++) {
+                cs3318_setVolReg(i, 0x11, vol_int);
+            }
+            display_volume(vol_int);
+            MIDI_send_mastervol(vol_int);
         }
-        display_volume(vol_int);
-        MIDI_send_mastervol(vol_int);
     }
     else if (!strncmp(subcmd, "ch", 2)) {
         int channel;
@@ -282,6 +298,12 @@ void cmd_MasterVol_help()
     "Example: vol ch3 -2.5\n"));
 }
 
+static void unmute(void) {
+    if (mutestate) {
+        mutestate = false;
+        cs3318_mute(0, false);
+    }
+}
 
 bool rotary_task(void)
 {
@@ -441,9 +463,7 @@ void cmd_Prefs_help(void)
 bool IR_rx_task(void)
 {
     static uint8_t toggle = 0;
-    static bool mutestate = false;
     q13_2 vol_int;
-
     uint16_t rc5_code = get_rc5_code();
     DEBUG_PRINT(2, "IR: 0x%X\n", rc5_code);
 
@@ -460,17 +480,20 @@ bool IR_rx_task(void)
     switch (rc5_code & 0x07FF) {
         case 0x0010:
             vol_int = cs3318_stepMasterVol(1);
+            unmute();
             display_volume(vol_int);
             MIDI_send_mastervol(vol_int);
             break;
         case 0x0011:
             vol_int = cs3318_stepMasterVol(-1);
+            unmute();
             display_volume(vol_int);
             MIDI_send_mastervol(vol_int);
             break;
         case 0x000D:
-            mutestate = !mutestate;  //TODO: mutestate not synchronized with other commands
+            mutestate = !mutestate;
             cs3318_mute(0, mutestate);
+            mutestate ? display_mute() : display_volume(cs3318_getVolReg(0, 0x11));
             //TODO: Send MIDI mute cmd
             break;
         case 0x000C:

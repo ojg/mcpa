@@ -23,10 +23,10 @@ To-do list
 - [x] Preferences - channel powerdown
 - [x] MIDI control
 - [x] RC5 - volume up/down
+- [x] LED 4-digit
 - Preferences - RC5 codes
 - RC5 - learning mode
 - Potmeter
-- LED 4-digit
 - LCD
 - Balance left/right
 - Auto-detect potmeter/rotary
