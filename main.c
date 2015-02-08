@@ -52,6 +52,7 @@ void cmd_Prefs(char *);
 void cmd_Prefs_help(void);
 bool rotary_task(void);
 bool IR_rx_task(void);
+static void display_volume(q13_2 volume_x4);
 
 uint8_t debuglevel = 0;
 inline uint8_t get_debuglevel() {
@@ -99,7 +100,7 @@ int main(void)
 
     /* Initialize debug USART */
 	USART_init(&USARTD0);
-    
+
 	/* Initialize TWI master. */
 	TWI_MasterInit(&TWIC, TWI_MASTER_INTLVL_LO_gc, TWI_BAUD(F_CPU, 100000));
 
@@ -125,7 +126,19 @@ int main(void)
     
     /* Init CS3318 */
     cs3318_init();
-    
+
+    /* Init 7-segment LED display */
+    PORTA.DIRSET = 0xFF;
+    PORTC.DIRSET = 0xF0;
+    PORTA.OUT = 0xFF;
+    PORTC.OUTSET = 0x00;
+    TCC5.CNT = 0;
+    TCC5.CCA = 200; //156Hz refresh rate
+    TCC5.CTRLA |= TC45_CLKSEL_DIV256_gc; //125kHz
+    TCC5.INTCTRLB |= TC45_CCAINTLVL_HI_gc;
+    PMIC.CTRL |= PMIC_HILVLEN_bm;
+    display_volume(preferences.vol_startup << 2);
+
     /* Ready to run */
 	printf_P(PSTR("\nWelcome to Octogain!\nReset status %d\nType help for list of commands\n%s"), RST.STATUS, CLI_PROMPT);
     RST.STATUS |= 0x3F;
@@ -150,6 +163,48 @@ int main(void)
     }
 }
 
+static const uint8_t number_to_digit[10] = {
+    1+2+4+8+16+32,  //0
+    2+4,            //1
+    1+2+8+16+64,    //2
+    1+2+4+8+64,     //3
+    2+4+32+64,      //4
+    1+4+8+32+64,    //5
+    1+4+8+16+32+64, //6
+    1+2+4,          //7
+    1+2+4+8+16+32+64,//8
+    1+2+4+8+32+64,  //9
+};
+static uint8_t led_digits[4] = {0, 0, 0, 0};
+static uint8_t led_count = 0;
+
+static void display_volume(q13_2 volume_x4)
+{
+    char str[6];
+
+    sprintf(str, "%05.1f", Q13_2_TO_FLOAT(volume_x4));
+    DEBUG_PRINT(2, "led-display string: %s\n", str);
+
+    led_digits[0] = (volume_x4 < 0) ? 64 : 0;
+
+    led_digits[1] = (str[1] == '0') ? 0 : number_to_digit[str[1] - 48];
+
+    led_digits[2] = number_to_digit[str[2] - 48] + 128;
+
+    led_digits[3] = number_to_digit[str[4] - 48];
+}
+
+ISR(TCC5_CCA_vect)
+{
+    if (++led_count > 3) {
+        led_count = 0;
+    }
+    PORTC.OUTCLR = 0xF0;
+    PORTA.OUT = led_digits[led_count];
+    PORTC.OUTSET = 0x10 << led_count;
+    TCC5.CNT = 0;
+}
+
 void cmd_MasterVol(char * stropt)
 {
     int numparams;
@@ -171,10 +226,12 @@ void cmd_MasterVol(char * stropt)
     }
     else if (!strncmp(subcmd, "up", 2)) {
         vol_int = cs3318_stepMasterVol(1);
+        display_volume(vol_int);
         MIDI_send_mastervol(vol_int);
     }
     else if (!strncmp(subcmd, "down", 4)) {
         vol_int = cs3318_stepMasterVol(-1);
+        display_volume(vol_int);
         MIDI_send_mastervol(vol_int);
     }
     else if (!strncmp(subcmd, "mute", 4)) {
@@ -188,9 +245,11 @@ void cmd_MasterVol(char * stropt)
     else if (!strncmp(subcmd, "set", 3)) {
         DEBUG_PRINT(1, "Set mastervolume to %.2fdB in %d boards\n", vol_db, cs3318_get_nslaves());
         vol_int = FLOAT_TO_Q13_2(vol_db);
+        //TODO: Range check on vol
         for (uint8_t i = 0; i < cs3318_get_nslaves(); i++) {
             cs3318_setVolReg(i, 0x11, vol_int);
         }
+        display_volume(vol_int);
         MIDI_send_mastervol(vol_int);
     }
     else if (!strncmp(subcmd, "ch", 2)) {
@@ -229,13 +288,18 @@ bool rotary_task(void)
     //direction: old,new:idx
     //CW:  0,1:1 1,3:7 3,2:e 2,0:8
     //CCW: 0,2:2 2,3:b 3,1:d 1,0:4
-    static int8_t direction_table[16] = {0, 1, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 0, -1, 1, 0};
+    static const int8_t direction_table[16] = {0, 1, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 0, -1, 1, 0};
     static uint8_t current_rotaryval = 0;
     uint8_t new_rotaryval = ROT_PORT.IN & 3;
     int8_t direction = direction_table[current_rotaryval<<2 | new_rotaryval];
-    q13_2 vol_int = cs3318_stepMasterVol(direction);
-    MIDI_send_mastervol(vol_int);
     current_rotaryval = new_rotaryval;
+
+    if (direction != 0) {
+        q13_2 vol_int = cs3318_stepMasterVol(direction);
+        display_volume(vol_int);
+        MIDI_send_mastervol(vol_int);
+    }
+
     return true;
 }
 
@@ -396,10 +460,12 @@ bool IR_rx_task(void)
     switch (rc5_code & 0x07FF) {
         case 0x0010:
             vol_int = cs3318_stepMasterVol(1);
+            display_volume(vol_int);
             MIDI_send_mastervol(vol_int);
             break;
         case 0x0011:
             vol_int = cs3318_stepMasterVol(-1);
+            display_volume(vol_int);
             MIDI_send_mastervol(vol_int);
             break;
         case 0x000D:

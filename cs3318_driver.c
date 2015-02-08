@@ -114,18 +114,17 @@ void cs3318_mute(uint8_t channel, bool mute)
 
 q13_2 cs3318_stepMasterVol(int direction)
 {
-    if (direction != 0) {
-        struct Preferences_t * prefs = get_preferences();
-        q13_2 volume_in_db_x4 = cs3318_getVolReg(0, 0x11);
-        volume_in_db_x4 += direction * prefs->vol_stepsize;
-        if (volume_in_db_x4 <= prefs->vol_max << 2 && volume_in_db_x4 >= prefs->vol_min << 2) {
-            DEBUG_PRINT(1, "Set mastervolume to %d: %.2f dB\n", volume_in_db_x4, Q13_2_TO_FLOAT(volume_in_db_x4));
-            for (uint8_t i = 0; i < cs3318_nslaves; i++) {
-                cs3318_setVolReg(i, 0x11, volume_in_db_x4);
-            }
+    struct Preferences_t * prefs = get_preferences();
+    q13_2 volume_in_db_x4 = cs3318_getVolReg(0, 0x11);
+    q13_2 new_volume = volume_in_db_x4 + direction * prefs->vol_stepsize;
+    if (new_volume <= prefs->vol_max << 2 && new_volume >= prefs->vol_min << 2) {
+        DEBUG_PRINT(1, "Set mastervolume to %d: %.2f dB\n", new_volume, Q13_2_TO_FLOAT(new_volume));
+        for (uint8_t i = 0; i < cs3318_nslaves; i++) {
+            cs3318_setVolReg(i, 0x11, new_volume);
         }
-        return volume_in_db_x4;
+        return new_volume;
     }
+    return volume_in_db_x4;
 }
 
 void cs3318_init(void)
