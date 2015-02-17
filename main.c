@@ -141,6 +141,10 @@ int main(void)
     PMIC.CTRL |= PMIC_HILVLEN_bm;
     display_volume(preferences.vol_startup << 2);
 
+    /* Turn off mute transistors */
+    MUTE_PORT.DIRSET = MUTE_PIN_bm;
+    MUTE_PORT.OUTSET = MUTE_PIN_bm;
+
     /* Ready to run */
 	printf_P(PSTR("\nWelcome to Octogain!\nReset status %d\nType help for list of commands\n%s"), RST.STATUS, CLI_PROMPT);
     RST.STATUS |= 0x3F;
@@ -257,10 +261,10 @@ void cmd_MasterVol(char * stropt)
     else if (!strncmp(subcmd, "set", 3)) {
         struct Preferences_t * prefs = get_preferences();
 
-        DEBUG_PRINT(1, "Set mastervolume to %.2fdB in %d boards\n", vol_db, cs3318_get_nslaves());
         vol_int = FLOAT_TO_Q13_2(vol_db);
 
         if (vol_int <= prefs->vol_max << 2 && vol_int >= prefs->vol_min << 2) {
+            DEBUG_PRINT(1, "Set mastervolume to %.2fdB in %d boards\n", vol_db, cs3318_get_nslaves());
             for (uint8_t i = 0; i < cs3318_get_nslaves(); i++) {
                 cs3318_setVolReg(i, 0x11, vol_int);
             }
