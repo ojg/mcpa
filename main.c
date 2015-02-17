@@ -135,8 +135,8 @@ int main(void)
     PORTA.OUT = 0xFF;
     PORTC.OUTSET = 0x00;
     TCC5.CNT = 0;
-    TCC5.CCA = 200; //156Hz refresh rate
-    TCC5.CTRLA |= TC45_CLKSEL_DIV256_gc; //125kHz
+    TCC5.CCA = 50; //~20kHz refresh rate
+    TCC5.CTRLA |= TC45_CLKSEL_DIV8_gc; //4MHz
     TCC5.INTCTRLB |= TC45_CCAINTLVL_HI_gc;
     PMIC.CTRL |= PMIC_HILVLEN_bm;
     display_volume(preferences.vol_startup << 2);
