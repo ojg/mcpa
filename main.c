@@ -137,7 +137,7 @@ int main(void)
     TCC5.CNT = 0;
     TCC5.CCA = 50; //~20kHz refresh rate
     TCC5.CTRLA |= TC45_CLKSEL_DIV8_gc; //4MHz
-    TCC5.INTCTRLB |= TC45_CCAINTLVL_HI_gc;
+    //TCC5.INTCTRLB |= TC45_CCAINTLVL_HI_gc;
     PMIC.CTRL |= PMIC_HILVLEN_bm;
     display_volume(preferences.vol_startup << 2);
 
@@ -183,6 +183,8 @@ static const uint8_t number_to_digit[10] = {
 };
 static uint8_t led_digits[4] = {0, 0, 0, 0};
 static uint8_t led_count = 0;
+static uint32_t screensave_count = 0;
+static const uint32_t screensave_timeout = 400000;
 
 static void display_volume(q13_2 volume_x4)
 {
@@ -198,14 +200,17 @@ static void display_volume(q13_2 volume_x4)
     led_digits[2] = number_to_digit[str[2] - 48] + 128;
 
     led_digits[3] = number_to_digit[str[4] - 48];
+
+    TCC5.INTCTRLB |= TC45_CCAINTLVL_HI_gc; //turn on irq
+    screensave_count = 0;
 }
 
 static void display_mute(void)
 {
-    led_digits[0] = 64;
-    led_digits[1] = 64;
-    led_digits[2] = 64;
-    led_digits[3] = 64;
+    TCC5.INTCTRLB &= ~TC45_CCAINTLVL_HI_gc; //turn on irq
+    PORTC.OUTCLR = 0xF0;
+    PORTA.OUT = 64;
+    PORTC.OUTSET = 0x80;
 }
 
 ISR(TCC5_CCA_vect)
@@ -214,9 +219,17 @@ ISR(TCC5_CCA_vect)
         led_count = 0;
     }
     PORTC.OUTCLR = 0xF0;
-    PORTA.OUT = led_digits[led_count];
-    PORTC.OUTSET = 0x10 << led_count;
-    TCC5.CNT = 0;
+
+    if (++screensave_count == screensave_timeout) {
+        TCC5.INTCTRLB &= ~TC45_CCAINTLVL_HI_gc; //turn off irq
+        PORTA.OUT = 128;
+        PORTC.OUTSET = 0x40;
+    } 
+    else {
+        PORTA.OUT = led_digits[led_count];
+        PORTC.OUTSET = 0x10 << led_count;
+        TCC5.CNT = 0;
+    }
 }
 
 void cmd_MasterVol(char * stropt)
