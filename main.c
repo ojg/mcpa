@@ -137,7 +137,6 @@ int main(void)
     TCC5.CNT = 0;
     TCC5.CCA = 50; //~20kHz refresh rate
     TCC5.CTRLA |= TC45_CLKSEL_DIV8_gc; //4MHz
-    //TCC5.INTCTRLB |= TC45_CCAINTLVL_HI_gc;
     PMIC.CTRL |= PMIC_HILVLEN_bm;
     display_volume(preferences.vol_startup << 2);
 
@@ -184,7 +183,7 @@ static const uint8_t number_to_digit[10] = {
 static uint8_t led_digits[4] = {0, 0, 0, 0};
 static uint8_t led_count = 0;
 static uint32_t screensave_count = 0;
-static const uint32_t screensave_timeout = 400000;
+static const uint32_t screensave_timeout = 800000;
 
 static void display_volume(q13_2 volume_x4)
 {
@@ -207,7 +206,7 @@ static void display_volume(q13_2 volume_x4)
 
 static void display_mute(void)
 {
-    TCC5.INTCTRLB &= ~TC45_CCAINTLVL_HI_gc; //turn on irq
+    TCC5.INTCTRLB &= ~TC45_CCAINTLVL_HI_gc; //turn off irq
     PORTC.OUTCLR = 0xF0;
     PORTA.OUT = 64;
     PORTC.OUTSET = 0x80;
@@ -223,7 +222,7 @@ ISR(TCC5_CCA_vect)
     if (++screensave_count == screensave_timeout) {
         TCC5.INTCTRLB &= ~TC45_CCAINTLVL_HI_gc; //turn off irq
         PORTA.OUT = 128;
-        PORTC.OUTSET = 0x40;
+        PORTC.OUT = 0x40;
     } 
     else {
         PORTA.OUT = led_digits[led_count];
@@ -262,11 +261,13 @@ void cmd_MasterVol(char * stropt)
         MIDI_send_mastervol(vol_int);
     }
     else if (!strncmp(subcmd, "mute", 4)) {
+        mutestate = true;
         cs3318_mute(numparams == 1 ? 0 : (uint8_t)vol_db, true);
         display_mute();
         //TODO: Send MIDI mute cmd
     }
     else if (!strncmp(subcmd, "unmute", 6)) {
+        mutestate = false;
         cs3318_mute(numparams == 1 ? 0 : (uint8_t)vol_db, false);
         display_volume(cs3318_getVolReg(0, 0x11));
         //TODO: Send MIDI unmute cmd
