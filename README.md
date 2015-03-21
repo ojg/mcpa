@@ -1,7 +1,7 @@
-Octogain
+MCPA
 ========
 
-Firmware for the XMega on the 8 Channel Gaincontroller
+Firmware for the XMega on the Multi Channel Pre Amp
 
 
 To-do list
