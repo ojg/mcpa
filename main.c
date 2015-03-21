@@ -145,7 +145,7 @@ int main(void)
     MUTE_PORT.OUTSET = MUTE_PIN_bm;
 
     /* Ready to run */
-	printf_P(PSTR("\nWelcome to Octogain!\nReset status %d\nType help for list of commands\n%s"), RST.STATUS, CLI_PROMPT);
+	printf_P(PSTR("\nWelcome to MCPA!\nReset status %d\nType help for list of commands\n%s"), RST.STATUS, CLI_PROMPT);
     RST.STATUS |= 0x3F;
 
 	while(1)
