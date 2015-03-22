@@ -47,6 +47,8 @@ struct Preferences_t * get_preferences(void) {
 
 void cmd_MasterVol(char *);
 void cmd_MasterVol_help(void);
+void cmd_Reboot(char *);
+void cmd_Reboot_help(void);
 void cmd_Debug(char *);
 void cmd_Debug_help(void);
 void cmd_Prefs(char *);
@@ -97,6 +99,7 @@ int main(void)
     register_cli_command("vol", cmd_MasterVol, cmd_MasterVol_help);
     register_cli_command("prefs", cmd_Prefs, cmd_Prefs_help);
     register_cli_command("debug", cmd_Debug, cmd_Debug_help);
+    register_cli_command("reboot", cmd_Reboot, cmd_Reboot_help);
 
     /* Set debug LED pin to output */
     DEBUGLED_PORT.DIRSET = DEBUGLED_PIN_bm;
@@ -545,4 +548,17 @@ bool IR_rx_task(void)
     }
 
     return true;
+}
+
+void cmd_Reboot(char * stropt)
+{
+    (void)*stropt;
+    CCPWrite( &RST.CTRL, RST_SWRST_bm );   /* Issue a Software Reset to initilize the CPU */
+}
+
+void cmd_Reboot_help()
+{
+    printf_P(PSTR( \
+    "reboot\n" \
+    "Reboot the uC. Run before SW upgrade with avrdude\n"));
 }
