@@ -20,6 +20,7 @@
 #include <avr/io.h>
 #include <avr/sleep.h>
 #include <avr/eeprom.h>
+#include <avr/wdt.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -145,8 +146,32 @@ int main(void)
     MUTE_PORT.OUTSET = MUTE_PIN_bm;
 
     /* Ready to run */
-	printf_P(PSTR("\nWelcome to MCPA!\nReset status %d\nType help for list of commands\n%s"), RST.STATUS, CLI_PROMPT);
+	printf_P(PSTR("\nWelcome to MCPA!\n"));
+    switch (RST.STATUS & 0x3F) {
+        case 1:
+            printf_P(PSTR("Power-on reset\n"));
+            break;
+        case 2:
+            printf_P(PSTR("External reset\n"));
+            break;
+        case 4:
+            printf_P(PSTR("Brownout reset\n"));
+            break;
+        case 8:
+            printf_P(PSTR("Watchdog reset\n"));
+            break;
+        case 16:
+            printf_P(PSTR("Debug reset\n"));
+            break;
+        case 32:
+            printf_P(PSTR("Software reset\n"));
+            break;
+    }
     RST.STATUS |= 0x3F;
+
+    printf_P(PSTR("Type help for list of commands\n%s"), CLI_PROMPT);
+
+    wdt_enable(WDT_PER_512CLK_gc); //512ms timeout
 
 	while(1)
 	{
@@ -162,9 +187,7 @@ int main(void)
             }
         }
         DEBUGLED_PORT.OUTSET = DEBUGLED_PIN_bm;
-        sleep_enable();
-        sleep_cpu();
-        sleep_disable();
+        wdt_reset();
     }
 }
 

@@ -55,7 +55,7 @@ typedef volatile uint8_t Task_flag_t;
 void set_taskflags(Task_flag_t bitmask);
 
 uint8_t get_debuglevel();
-#define DEBUG_PRINT(level, format, ...) if (get_debuglevel() >= level) printf(format, ##__VA_ARGS__)
+#define DEBUG_PRINT(level, format, ...) if (get_debuglevel() >= level) { printf(format, ##__VA_ARGS__); }
 
 #define MAX_SLAVE_BOARDS 4
 

@@ -24,6 +24,8 @@ To-do list
 - [x] MIDI control
 - [x] RC5 - volume up/down
 - [x] LED 4-digit
+- [x] Watchdog
+- Reboot command
 - Preferences - RC5 codes
 - RC5 - learning mode
 - Potmeter
