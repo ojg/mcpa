@@ -61,7 +61,7 @@ q13_2 cs3318_getVolReg(uint8_t chip, uint8_t regaddr)
     }
     else { //if channel offset registers, get corresponding bit in quaarter db register
         regaddr--;
-        quarterdb_val = cs3318_read(chip, 0x09) & (1 << regaddr);
+        quarterdb_val = (cs3318_read(chip, 0x09) >> regaddr) & 1;
     }
     volume_in_db_x4 = (((q13_2)regval - 210) << 1) | quarterdb_val;
     return volume_in_db_x4;

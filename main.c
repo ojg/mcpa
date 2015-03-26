@@ -312,16 +312,24 @@ void cmd_MasterVol(char * stropt)
             MIDI_send_mastervol(vol_int);
         }
     }
-    else if (!strncmp(subcmd, "ch", 2)) {
-        int channel;
-        numparams = sscanf(subcmd, "ch%d", &channel);
-        uint8_t chip = (channel - 1) >> 3;
-        channel = ((channel - 1) & 0x7) + 1;
-        if (numparams != 1 || channel < 1 || channel > 8 || chip >= cs3318_get_nslaves()) {
-            printf("Invalid channel %d\n", channel);
-            return;
+    else if (!strncmp(subcmd, "offset", 6)) {
+        int chip, channel;
+        numparams = sscanf(stropt, "offset %d %f", &channel, &vol_db);
+        if (numparams < 1) {
+            for (channel = 0; channel < 8*cs3318_get_nslaves(); channel++) {
+                chip = channel >> 3;
+                printf("Offset channel %d %.2f dB\n", channel+1, Q13_2_TO_FLOAT(cs3318_getVolReg(chip, (channel & 0x7) + 1)));
+            }
         }
-        cs3318_setVolReg(chip, channel, FLOAT_TO_Q13_2(vol_db));
+        else {
+            chip = (channel - 1) >> 3;
+            channel = ((channel - 1) & 0x7) + 1;
+            if (numparams == 1 || channel < 1 || channel > 8 || chip >= cs3318_get_nslaves()) {
+                printf("Invalid channel %d\n", channel);
+                return;
+            }
+            cs3318_setVolReg(chip, channel, FLOAT_TO_Q13_2(vol_db));
+        }
     }
     else {
         printf("Unknown sub-command\n");
@@ -337,9 +345,9 @@ void cmd_MasterVol_help()
     "vol mute [channel]\n" \
     "vol unmute [channel]\n" \
     "vol set [master value in dB]\n" \
-    "vol ch[channel number >= 1] [offset value in dB]\n" \
+    "vol offset [channel number >= 1] [offset value in dB]\n" \
     "Example: vol set -23.75\n" \
-    "Example: vol ch3 -2.5\n"));
+    "Example: vol offset 3 -2.5\n"));
 }
 
 static void unmute(void) {
