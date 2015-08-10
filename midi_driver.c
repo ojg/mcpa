@@ -8,6 +8,8 @@
 #include "usart_driver.h"
 #include "board.h"
 #include "preferences.h" //q13_2
+#include "cs3318_driver.h"
+#include "led7seg_driver.h"
 #include <stdio.h>
 
 USART_data_t MIDI_data;
@@ -36,7 +38,7 @@ void MIDI_init(USART_t * usart)
     USART_Rx_Enable(MIDI_data.usart);
     USART_Tx_Enable(MIDI_data.usart);
 
-    // Enable PMIC interrupt level low
+    // Enable PMIC interrupt level medium
     PMIC.CTRL |= PMIC_MEDLVLEN_bm;
 }
 
@@ -75,6 +77,10 @@ bool MIDI_rx_task(void)
     /* Advance buffer tail. */
     bufPtr->RX_Tail = (bufPtr->RX_Tail + 1) & USART_RX_BUFFER_MASK;
 
+    if (c & 0x80) {
+        MIDI_RX_state = IDLE;
+    }        
+
     switch (MIDI_RX_state) {
         case STATUS_RX:
             if (!(c & 0x80)) {
@@ -86,19 +92,32 @@ bool MIDI_rx_task(void)
             if (!(c & 0x80)) {
                 data[2] = c;
                 DEBUG_PRINT(1, "0x%02X, 0x%02X, 0x%02X\n", data[0], data[1], data[2]);
+                if (data[0] == 0xB0 && data[1] == 7) {
+                    struct Preferences_t * prefs = get_preferences();
+                    q13_2 vol_int = (data[2] - 99) << 2;
+                    if (vol_int <= prefs->vol_max << 2 && vol_int >= prefs->vol_min << 2) {
+                        for (uint8_t i = 0; i < cs3318_get_nslaves(); i++) {
+                            cs3318_setVolReg(i, 0x11, vol_int);
+                        }
+                        display_volume(vol_int);
+                    }                        
+                }
                 MIDI_RX_state = IDLE;
             }
             break;
         case IDLE:
         default:  
             if (c & 0x80) {
-                data[0] = c & 0x7f;
+                data[0] = c;
                 MIDI_RX_state = STATUS_RX;
             }
             break;
     }
-
-    return true;
+    
+    if (bufPtr->RX_Tail == bufPtr->RX_Head)
+        return true;
+    else
+        return false;    
 }
 
 //  Receive complete interrupt service routine.
