@@ -127,14 +127,18 @@ int main(void)
     /* Initialize MIDI USART */
     MIDI_init(&USARTC0);
 
+#ifdef USE_RC5
     /* Initialize RC5 IR reciever */
     rc5_init();
-    
+#endif
+
     /* Init CS3318 */
     cs3318_init();
 
+#ifdef USE_7SEG
     /* Init 7-segment LED display */
     display_init(preferences.vol_startup << 2);
+#endif
     
     /* Turn off mute transistors */
     MUTE_PORT.DIRSET = MUTE_PIN_bm;
@@ -190,7 +194,7 @@ void cmd_MasterVol(char * stropt)
 {
     int numparams;
     char subcmd[10];
-    float vol_db = 0.0f;
+    float vol_db = -99.0f;
     q13_2 vol_int;
 
     numparams = sscanf(stropt, "%9s %f\n", subcmd, &vol_db);
