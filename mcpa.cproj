@@ -123,6 +123,12 @@
     <Compile Include="board.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="led7seg_driver.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="led7seg_driver.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="midi_driver.c">
       <SubType>compile</SubType>
     </Compile>
