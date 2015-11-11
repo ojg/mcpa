@@ -4,7 +4,8 @@
  * Created: 06.11.2014 20:32:10
  *  Author: ole
  */ 
-
+#define USE_7SEG
+#define USE_RC5
 #define F_CPU 32000000
 
 #include "board.h"
